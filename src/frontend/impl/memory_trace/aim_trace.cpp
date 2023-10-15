@@ -9,27 +9,32 @@ namespace Ramulator {
 
 namespace fs = std::filesystem;
 
-class ReadWriteTrace : public IFrontEnd, public Implementation {
-    RAMULATOR_REGISTER_IMPLEMENTATION(IFrontEnd, ReadWriteTrace, "ReadWriteTrace", "Read/Write DRAM address vector trace.")
+class AiMTrace : public IFrontEnd, public Implementation {
+
+    RAMULATOR_REGISTER_IMPLEMENTATION(IFrontEnd, AiMTrace, "AiMTrace", "AiM ISR trace.")
 
 private:
     struct Trace {
         bool is_write;
-        AddrVec_t addr_vec;
+        Addr_t addr;
     };
     std::vector<Trace> m_trace;
 
     size_t m_trace_length = 0;
     size_t m_curr_trace_idx = 0;
 
+    size_t m_trace_count = 0;
+
     Logger_t m_logger;
 
 public:
     void init() override {
-        std::string trace_path_str = param<std::string>("path").desc("Path to the load store trace file.").required();
+        std::string trace_path_str = param<std::string>("path")
+                                         .desc("Path to the load store trace file.")
+                                         .required();
         m_clock_ratio = param<uint>("clock_ratio").required();
 
-        m_logger = Logging::create_logger("ReadWriteTrace");
+        m_logger = Logging::create_logger("AiMTrace");
         m_logger->info("Loading trace file {} ...", trace_path_str);
         init_trace(trace_path_str);
         m_logger->info("Loaded {} lines.", m_trace.size());
@@ -37,8 +42,12 @@ public:
 
     void tick() override {
         const Trace &t = m_trace[m_curr_trace_idx];
-        m_memory_system->send({t.addr_vec, t.is_write ? Request::Type::Read : Request::Type::Write});
-        m_curr_trace_idx = (m_curr_trace_idx + 1) % m_trace_length;
+        bool request_sent = m_memory_system->send(
+            {t.addr, t.is_write ? Request::Type::Write : Request::Type::Read});
+        if (request_sent) {
+            m_curr_trace_idx = (m_curr_trace_idx + 1) % m_trace_length;
+            m_trace_count++;
+        }
     };
 
 private:
@@ -64,23 +73,22 @@ private:
             }
 
             bool is_write = false;
-            if (tokens[0] == "R") {
+            if (tokens[0] == "LD") {
                 is_write = false;
-            } else if (tokens[0] == "W") {
+            } else if (tokens[0] == "ST") {
                 is_write = true;
             } else {
                 throw ConfigurationError("Trace {} format invalid!", file_path_str);
             }
 
-            std::vector<std::string> addr_vec_tokens;
-            tokenize(addr_vec_tokens, tokens[1], ",");
-
-            AddrVec_t addr_vec;
-            for (const auto &token : addr_vec_tokens) {
-                addr_vec.push_back(std::stoll(token));
+            Addr_t addr = -1;
+            if (tokens[1].compare(0, 2, "0x") == 0 |
+                tokens[1].compare(0, 2, "0X") == 0) {
+                addr = std::stoll(tokens[1].substr(2), nullptr, 16);
+            } else {
+                addr = std::stoll(tokens[1]);
             }
-
-            m_trace.push_back({is_write, addr_vec});
+            m_trace.push_back({is_write, addr});
         }
 
         trace_file.close();
@@ -89,9 +97,7 @@ private:
     };
 
     // TODO: FIXME
-    bool is_finished() override {
-        return true;
-    };
+    bool is_finished() override { return m_trace_count >= m_trace_length; };
 };
 
 } // namespace Ramulator

@@ -1,0 +1,5 @@
+ReflowComments: false
+IndentWidth: 4
+AccessModifierOffset: -4
+ColumnLimit: 0
+AllowAllArgumentsOnNextLine: true
