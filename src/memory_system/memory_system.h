@@ -1,45 +1,44 @@
-#ifndef     RAMULATOR_MEMORYSYSTEM_MEMORY_H
-#define     RAMULATOR_MEMORYSYSTEM_MEMORY_H
+#ifndef RAMULATOR_MEMORYSYSTEM_MEMORY_H
+#define RAMULATOR_MEMORYSYSTEM_MEMORY_H
 
-#include <map>
-#include <vector>
-#include <string>
 #include <functional>
+#include <map>
+#include <string>
+#include <vector>
 
 #include "base/base.h"
 #include "frontend/frontend.h"
 
-
 namespace Ramulator {
 
 class IMemorySystem : public TopLevel<IMemorySystem> {
-  RAMULATOR_REGISTER_INTERFACE(IMemorySystem, "MemorySystem", "Memory system interface (e.g., communicates between processor and memory controller).")
+    RAMULATOR_REGISTER_INTERFACE(IMemorySystem, "MemorySystem", "Memory system interface (e.g., communicates between processor and memory controller).")
 
-  friend class Factory;
+    friend class Factory;
 
-  protected:
-    IFrontEnd* m_frontend;
+protected:
+    IFrontEnd *m_frontend;
     uint m_clock_ratio = 1;
 
-  public:
-    virtual void connect_frontend(IFrontEnd* frontend) { 
-      m_frontend = frontend; 
-      m_impl->setup(frontend, this);
-      for (auto component : m_components) {
-        component->setup(frontend, this);
-      }
+public:
+    virtual void connect_frontend(IFrontEnd *frontend) {
+        m_frontend = frontend;
+        m_impl->setup(frontend, this);
+        for (auto component : m_components) {
+            component->setup(frontend, this);
+        }
     };
 
-    virtual void finalize() { 
-      for (auto component : m_components) {
-        component->finalize();
-      }
+    virtual void finalize() {
+        for (auto component : m_components) {
+            component->finalize();
+        }
 
-      YAML::Emitter emitter;
-      emitter << YAML::BeginMap;
-      m_impl->print_stats(emitter);
-      emitter << YAML::EndMap;
-      std::cout << emitter.c_str() << std::endl;
+        YAML::Emitter emitter;
+        emitter << YAML::BeginMap;
+        m_impl->print_stats(emitter);
+        emitter << YAML::EndMap;
+        std::cout << emitter.c_str() << std::endl;
     };
 
     /**
@@ -66,14 +65,13 @@ class IMemorySystem : public TopLevel<IMemorySystem> {
 
     // /**
     //  * @brief    Get the integer id of the request type from the memory spec
-    //  * 
+    //  *
     //  */
     // virtual const SpecDef& get_supported_requests() = 0;
 
     virtual float get_tCK() { return -1.0f; };
 };
 
-}        // namespace Ramulator
+} // namespace Ramulator
 
-
-#endif   // RAMULATOR_MEMORYSYSTEM_MEMORY_H
+#endif // RAMULATOR_MEMORYSYSTEM_MEMORY_H

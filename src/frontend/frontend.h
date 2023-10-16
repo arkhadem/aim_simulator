@@ -1,46 +1,45 @@
-#ifndef     RAMULATOR_FRONTEND_FRONTEND_H
-#define     RAMULATOR_FRONTEND_FRONTEND_H
+#ifndef RAMULATOR_FRONTEND_FRONTEND_H
+#define RAMULATOR_FRONTEND_FRONTEND_H
 
-#include <vector>
-#include <string>
 #include <functional>
+#include <string>
+#include <vector>
 
 #include "base/base.h"
 #include "memory_system/memory_system.h"
 
-
 namespace Ramulator {
 
 class IFrontEnd : public Clocked<IFrontEnd>, public TopLevel<IFrontEnd> {
-  RAMULATOR_REGISTER_INTERFACE(IFrontEnd, "Frontend", "The frontend that drives the simulation.");
+    RAMULATOR_REGISTER_INTERFACE(IFrontEnd, "Frontend", "The frontend that drives the simulation.");
 
-  friend class Factory;
+    friend class Factory;
 
-  protected:
-    IMemorySystem* m_memory_system;
+protected:
+    IMemorySystem *m_memory_system;
     uint m_clock_ratio = 1;
 
-  public:
-    virtual void connect_memory_system(IMemorySystem* memory_system) { 
-      m_memory_system = memory_system; 
-      m_impl->setup(this, memory_system);
-      for (auto component : m_components) {
-        component->setup(this, memory_system);
-      }
+public:
+    virtual void connect_memory_system(IMemorySystem *memory_system) {
+        m_memory_system = memory_system;
+        m_impl->setup(this, memory_system);
+        for (auto component : m_components) {
+            component->setup(this, memory_system);
+        }
     };
 
     virtual bool is_finished() = 0;
 
-    virtual void finalize() { 
-      for (auto component : m_components) {
-        component->finalize();
-      }
+    virtual void finalize() {
+        for (auto component : m_components) {
+            component->finalize();
+        }
 
-      YAML::Emitter emitter;
-      emitter << YAML::BeginMap;
-      m_impl->print_stats(emitter);
-      emitter << YAML::EndMap;
-      std::cout << emitter.c_str() << std::endl;
+        YAML::Emitter emitter;
+        emitter << YAML::BeginMap;
+        m_impl->print_stats(emitter);
+        emitter << YAML::EndMap;
+        std::cout << emitter.c_str() << std::endl;
     };
 
     virtual int get_num_cores() { return 1; };
@@ -55,10 +54,9 @@ class IFrontEnd : public Clocked<IFrontEnd>, public TopLevel<IFrontEnd> {
      * (tries to) send to the memory system, and return if this is successful
      * 
      */
-    virtual bool receive_external_requests(int req_type_id, Addr_t addr, int source_id, std::function<void(Request&)> callback) { return false; }
+    virtual bool receive_external_requests(int req_type_id, Addr_t addr, int source_id, std::function<void(Request &)> callback) { return false; }
 };
 
-}        // namespace Ramulator
+} // namespace Ramulator
 
-
-#endif   // RAMULATOR_FRONTEND_FRONTEND_H
+#endif // RAMULATOR_FRONTEND_FRONTEND_H
