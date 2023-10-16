@@ -7,6 +7,27 @@
 
 namespace Ramulator {
 
+#define ISR_SIZE (1 << 21)
+#define CFR_SIZE (1 << 14)
+#define GPR_SIZE (1 << 19)
+
+#define CFR_ADDR_MIN (ISR_SIZE)
+#define CFR_ADDR_MAX (ISR_SIZE + CFR_SIZE - 1)
+#define GPR_ADDR_MIN (ISR_SIZE + CFR_SIZE)
+#define GPR_ADDR_MAX (ISR_SIZE + CFR_SIZE + GPR_SIZE - 1)
+#define MEM_ADDR_MIN (ISR_SIZE + CFR_SIZE + GPR_SIZE)
+
+enum mem_access_t {
+    ISR,
+    CFR,
+    GPR,
+    MEM,
+    MAX
+};
+
+mem_access_t address_type_decoder(long addr) {
+}
+
 namespace fs = std::filesystem;
 
 class AiMTrace : public IFrontEnd, public Implementation {
@@ -30,7 +51,7 @@ private:
 public:
     void init() override {
         std::string trace_path_str = param<std::string>("path")
-                                         .desc("Path to the load store trace file.")
+                                         .desc("Path to the AiM host request trace file.")
                                          .required();
         m_clock_ratio = param<uint>("clock_ratio").required();
 

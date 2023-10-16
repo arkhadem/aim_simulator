@@ -27,9 +27,15 @@ struct Request {
     // ISR Command Opcodes
     struct Opcode {
         enum : int {
-            ISR_WR_SBK,    // Write data from [GPR] to [a single bank]
-            ISR_WR_GB,     // Write data from [GPR] to [Global Buffer] // [NOT_IMPLEMENTED] source could also be [host]
-            ISR_WR_BIAS,   // Write data from [GPR] to [MAC accumulator of all banks]
+            ISR_WR_SBK, // Write [op_size * 256 bits] from [GPR * 32] to [a single bank] of channel [#channel_address]
+
+            ISR_WR_GB, // Write the same [op_size * 256 bits] starting from [GPR * 32]
+                       // to the [Global Buffer] of [channel_mask] channels
+                       // [NOT_IMPLEMENTED] source could also be [host]
+
+            ISR_WR_BIAS, // Write [opsize * 16 x 16-bits] bits from [GPR * 32]
+                         // to [MAC accumulator of 16 banks] of [opsize or channel_mask] channels
+
             ISR_WR_AFLUT,  // Write activation function data from [host] to [?]
             ISR_RD_MAC,    // Read data from [MAC accumulator of all banks] to [GPR]
             ISR_RD_AF,     // Read data from [AF results of all banks] to [GPR]
@@ -69,13 +75,14 @@ struct Request {
     Addr_t GPR_addr_0 = -1;
     Addr_t GPR_addr_1 = -1;
 
-    // [NOT_IMPLEMENTED] [Implemented as a CFR flag] Thread (register) index (0 or 1) for MAC and AF results
-    // bool thread_index = false;
+    // Thread (register) index (0 or 1) for MAC and AF results
+    uint8_t thread_index = -1;
 
     // This request will be broadcasted/multicasted to the channels
-    // whose bit is set in channel mask. NOT USED in the following ISRs:
-    // ISR_WR_SBK, ISR_RD_SBK, ISR_RD_MAC, ISR_RD_AF, and ISR_EWADD
-    uint8_t channel_mask = 0;
+    // whose bit is set in channel mask.
+    // NOT USED in ISR_EWADD.
+    // Channel mask must show 1 channel in ISR_WR_SBK and ISR_RD_SBK ISRs
+    uint8_t channel_mask = -1;
 
     // This request will be sent to a specific bank. USED only in single-bank ISRs, i.e.,
     // ISR_WR_SBK, ISR_RD_SBK, ISR_MAC_SBK, and ISR_EWMUL
