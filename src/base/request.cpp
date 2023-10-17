@@ -2,8 +2,6 @@
 
 namespace Ramulator {
 
-Request::Request(){};
-
 Request::Request(Addr_t addr, Request::Type type) : addr(addr), type(type){};
 
 Request::Request(AddrVec_t addr_vec, Request::Type type) : addr_vec(addr_vec), type(type){};

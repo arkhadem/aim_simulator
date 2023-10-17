@@ -81,6 +81,9 @@ private:
     std::ifstream *trace_file;
     std::string file_path;
 
+    Request req;
+    bool remaining_req = false;
+
     static std::map<std::string, AiMHostRequest> str_to_aim_map;
     static std::map<std::string, Ramulator::Request::Type> str_to_type;
     static std::map<std::string, Ramulator::Request::MemAccessRegion> str_to_mem_access_region;
@@ -95,15 +98,18 @@ public:
         m_logger = Logging::create_logger("AiMTrace");
         m_logger->info("Opening trace file {} ...", trace_path_str);
         init_trace(trace_path_str);
+        remaining_req = false;
     };
 
     void tick() override {
-        const Request &t = m_trace[m_curr_trace_idx];
-        bool request_sent = m_memory_system->send(
-            {t.addr, t.is_write ? Request::Type::Write : Request::Type::Read});
-        if (request_sent) {
-            m_curr_trace_idx = (m_curr_trace_idx + 1) % m_trace_length;
-            m_trace_count++;
+        if (m_trace_reached_EOC == false) {
+            if (remaining_req == false) {
+                req = get_host_AiM_request();
+                remaining_req = true;
+            }
+            bool request_sent = m_memory_system->send(req);
+            if (request_sent)
+                remaining_req = false;
         }
     };
 
@@ -233,7 +239,7 @@ private:
                 m_curr_trace_idx++;
                 continue;
             } else {
-                Request req();
+                Request req(-1, Request::Type::MAX);
 
                 std::vector<std::string> tokens;
                 tokenize(tokens, line, ",");
@@ -307,6 +313,8 @@ private:
                         }
                     }
                 }
+
+                return req;
             }
         }
     };

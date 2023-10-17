@@ -110,7 +110,6 @@ struct Request {
 
     std::function<void(Request &)> callback;
 
-    Request();
     Request(Addr_t addr, Type type);
     Request(AddrVec_t addr_vec, Type type);
     Request(Addr_t addr, Type type, int source_id, std::function<void(Request &)> callback);
