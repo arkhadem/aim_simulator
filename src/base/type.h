@@ -10,7 +10,7 @@ namespace Ramulator {
 
 using Clk_t = int64_t;              // Clock cycle
 using Addr_t = int64_t;             // Plain address as seen by the OS
-using Data_t = int8_t;              // 1 byte data type
+using Data_t = int32_t;             // 1 byte data type
 using AddrVec_t = std::vector<int>; // Device address vector as is sent to the device from the controller
 
 template <typename T>

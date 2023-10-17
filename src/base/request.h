@@ -1,6 +1,7 @@
 #ifndef RAMULATOR_BASE_REQUEST_H
 #define RAMULATOR_BASE_REQUEST_H
 
+#include <cstdint>
 #include <list>
 #include <string>
 #include <vector>
@@ -12,8 +13,10 @@ namespace Ramulator {
 struct Request {
     Addr_t addr = -1;
     Addr_t addr_max = -1;
-    Data_t data = -1;
+    Data_t data;
     AddrVec_t addr_vec{};
+    int host_req_id = -1;
+    int AiM_req_id = -1;
 
     // Basic request id convention
     // 0 = Read, 1 = Write. The device spec defines all others
@@ -25,6 +28,7 @@ struct Request {
     } type;
 
     enum class MemAccessRegion {
+        MIN,
         GPR,
         CFR,
         MEM,
@@ -33,6 +37,7 @@ struct Request {
 
     // ISR Command Opcodes
     enum class Opcode {
+        MIN,
         ISR_WR_SBK, // Write [op_size * 256 bits] from [GPR * 32] to [a single bank] of channel [#channel_address]
 
         ISR_WR_GB, // Write the same [op_size * 256 bits] starting from [GPR * 32]
@@ -100,6 +105,18 @@ struct Request {
     // Thread (register) index (0 or 1) for MAC and AF results
     uint8_t thread_index = -1;
 
+    // Broadcast only USED for ISR_MAC_SBK and ISR_MAC_ABK
+    // vector data for MAC is from GB (0) or next bank (1)
+    uint16_t broadcast = -1;
+
+    // AFM only USED for ISR_AF
+    // Activation Function mode selects AF (0-7)
+    uint16_t afm = -1;
+
+    // ewmul bank group only USED for ISR_MAC_ABK
+    // EWMUL in one bank group (0) or all bank groups (1)
+    uint16_t ewmul_bg = -1;
+
     int source_id = -1; // An identifier for where the request is coming from (e.g., which core)
 
     int command = -1;       // The command that need to be issued to progress the request
@@ -114,6 +131,355 @@ struct Request {
     Request(AddrVec_t addr_vec, Type type);
     Request(Addr_t addr, Type type, int source_id, std::function<void(Request &)> callback);
 };
+
+class AiMISR {
+
+public:
+    enum class Field {
+        opsize,
+        GPR_addr_0,
+        GPR_addr_1,
+        channel_mask,
+        bank_index,
+        row_addr,
+        col_addr,
+        thread_index
+    };
+
+    AiMISR(Request::Opcode opcode_,
+           std::vector<Field> legal_fields_,
+           int channel_count_eq_opsize_,
+           int channel_count_eq_one_,
+           int AiM_DMA_blocking_)
+        : opcode(opcode_),
+          legal_fields(legal_fields_),
+          channel_count_eq_opsize(channel_count_eq_opsize_),
+          channel_count_eq_one(channel_count_eq_one_),
+          AiM_DMA_blocking(AiM_DMA_blocking_) {}
+
+    Request::Opcode opcode;
+
+    std::vector<Field> legal_fields;
+
+    bool channel_count_eq_opsize;
+    bool channel_count_eq_one;
+    bool AiM_DMA_blocking;
+
+    bool is_field_legal(Field field) {
+        if (std::count(legal_fields.begin(), legal_fields.end(), field))
+            return true;
+        return false;
+    }
+
+    template <typename T>
+    void is_field_value_legal(Field field, T value) {
+        if (is_field_legal(field)) {
+            if (value == (T)-1) {
+                throw ConfigurationError("Trace: opcode {} must be provided with field {}!", (int)opcode, (int)field);
+            }
+        } else {
+            if (value != (T)-1) {
+                throw ConfigurationError("Trace: opcode {} does not accept field {}!", (int)opcode, (int)field);
+            }
+        }
+    }
+};
+
+class AiMISRInfo {
+private:
+    static std::map<std::string, AiMISR> opcode_str_to_aim_ISR;
+    static std::map<Request::Opcode, std::string> aim_opcode_to_str;
+
+    static std::map<std::string, Request::Type> str_to_type;
+    static std::map<Request::Type, std::string> type_to_str;
+
+    static std::map<std::string, Request::MemAccessRegion> str_to_mem_access_region;
+    static std::map<Request::MemAccessRegion, std::string> mem_access_region_to_str;
+
+public:
+    static void init() {
+        aim_opcode_to_str[Request::Opcode::ISR_WR_SBK] = "ISR_WR_SBK";
+        opcode_str_to_aim_ISR["ISR_WR_SBK"] = AiMISR(Request::Opcode::ISR_WR_SBK,
+                                                     {AiMISR::Field::opsize,
+                                                      AiMISR::Field::GPR_addr_0,
+                                                      AiMISR::Field::channel_mask,
+                                                      AiMISR::Field::bank_index,
+                                                      AiMISR::Field::row_addr,
+                                                      AiMISR::Field::col_addr},
+                                                     false, // channel_count_eq_opsize
+                                                     true,  // channel_count_eq_one
+                                                     false  // AiM_DMA_blocking
+        );
+
+        aim_opcode_to_str[Request::Opcode::ISR_WR_GB] = "ISR_WR_GB";
+        opcode_str_to_aim_ISR["ISR_WR_GB"] = AiMISR(Request::Opcode::ISR_WR_GB,
+                                                    {AiMISR::Field::opsize,
+                                                     AiMISR::Field::GPR_addr_0,
+                                                     AiMISR::Field::channel_mask,
+                                                     AiMISR::Field::col_addr},
+                                                    false, // channel_count_eq_opsize
+                                                    false, // channel_count_eq_one
+                                                    false  // AiM_DMA_blocking
+        );
+
+        aim_opcode_to_str[Request::Opcode::ISR_WR_BIAS] = "ISR_WR_BIAS";
+        opcode_str_to_aim_ISR["ISR_WR_BIAS"] = AiMISR(Request::Opcode::ISR_WR_BIAS,
+                                                      {AiMISR::Field::opsize,
+                                                       AiMISR::Field::GPR_addr_0,
+                                                       AiMISR::Field::channel_mask,
+                                                       AiMISR::Field::thread_index},
+                                                      true,  // channel_count_eq_opsize
+                                                      false, // channel_count_eq_one
+                                                      false  // AiM_DMA_blocking
+        );
+
+        aim_opcode_to_str[Request::Opcode::ISR_WR_AFLUT] = "ISR_WR_AFLUT";
+        opcode_str_to_aim_ISR["ISR_WR_AFLUT"] = AiMISR(Request::Opcode::ISR_WR_AFLUT,
+                                                       {AiMISR::Field::opsize},
+                                                       false, // channel_count_eq_opsize
+                                                       false, // channel_count_eq_one
+                                                       false  // AiM_DMA_blocking
+        );
+
+        aim_opcode_to_str[Request::Opcode::ISR_RD_MAC] = "ISR_RD_MAC";
+        opcode_str_to_aim_ISR["ISR_RD_MAC"] = AiMISR(Request::Opcode::ISR_RD_MAC,
+                                                     {AiMISR::Field::opsize,
+                                                      AiMISR::Field::GPR_addr_0,
+                                                      AiMISR::Field::channel_mask,
+                                                      AiMISR::Field::thread_index},
+                                                     true,  // channel_count_eq_opsize
+                                                     false, // channel_count_eq_one
+                                                     true   // AiM_DMA_blocking
+        );
+
+        aim_opcode_to_str[Request::Opcode::ISR_RD_AF] = "ISR_RD_AF";
+        opcode_str_to_aim_ISR["ISR_RD_AF"] = AiMISR(Request::Opcode::ISR_RD_AF,
+                                                    {AiMISR::Field::opsize,
+                                                     AiMISR::Field::GPR_addr_0,
+                                                     AiMISR::Field::channel_mask},
+                                                    true,  // channel_count_eq_opsize
+                                                    false, // channel_count_eq_one
+                                                    true   // AiM_DMA_blocking
+        );
+
+        aim_opcode_to_str[Request::Opcode::ISR_RD_SBK] = "ISR_RD_SBK";
+        opcode_str_to_aim_ISR["ISR_RD_SBK"] = AiMISR(Request::Opcode::ISR_RD_SBK,
+                                                     {AiMISR::Field::opsize,
+                                                      AiMISR::Field::channel_mask,
+                                                      AiMISR::Field::bank_index,
+                                                      AiMISR::Field::row_addr,
+                                                      AiMISR::Field::col_addr},
+                                                     false, // channel_count_eq_opsize
+                                                     true,  // channel_count_eq_one
+                                                     true   // AiM_DMA_blocking
+        );
+
+        aim_opcode_to_str[Request::Opcode::ISR_COPY_BKGB] = "ISR_COPY_BKGB";
+        opcode_str_to_aim_ISR["ISR_COPY_BKGB"] = AiMISR(Request::Opcode::ISR_COPY_BKGB,
+                                                        {AiMISR::Field::opsize,
+                                                         AiMISR::Field::channel_mask,
+                                                         AiMISR::Field::bank_index,
+                                                         AiMISR::Field::row_addr,
+                                                         AiMISR::Field::col_addr},
+                                                        false, // channel_count_eq_opsize
+                                                        false, // channel_count_eq_one
+                                                        false  // AiM_DMA_blocking
+        );
+
+        aim_opcode_to_str[Request::Opcode::ISR_COPY_GBBK] = "ISR_COPY_GBBK";
+        opcode_str_to_aim_ISR["ISR_COPY_GBBK"] = AiMISR(Request::Opcode::ISR_COPY_GBBK,
+                                                        {AiMISR::Field::opsize,
+                                                         AiMISR::Field::channel_mask,
+                                                         AiMISR::Field::bank_index,
+                                                         AiMISR::Field::row_addr,
+                                                         AiMISR::Field::col_addr},
+                                                        false, // channel_count_eq_opsize
+                                                        false, // channel_count_eq_one
+                                                        false  // AiM_DMA_blocking
+        );
+
+        aim_opcode_to_str[Request::Opcode::ISR_MAC_SBK] = "ISR_MAC_SBK";
+        opcode_str_to_aim_ISR["ISR_MAC_SBK"] = AiMISR(Request::Opcode::ISR_MAC_SBK,
+                                                      {AiMISR::Field::opsize,
+                                                       AiMISR::Field::channel_mask,
+                                                       AiMISR::Field::bank_index,
+                                                       AiMISR::Field::row_addr,
+                                                       AiMISR::Field::col_addr,
+                                                       AiMISR::Field::thread_index},
+                                                      false, // channel_count_eq_opsize
+                                                      false, // channel_count_eq_one
+                                                      false  // AiM_DMA_blocking
+        );
+
+        aim_opcode_to_str[Request::Opcode::ISR_MAC_ABK] = "ISR_MAC_ABK";
+        opcode_str_to_aim_ISR["ISR_MAC_ABK"] = AiMISR(Request::Opcode::ISR_MAC_ABK,
+                                                      {AiMISR::Field::opsize,
+                                                       AiMISR::Field::channel_mask,
+                                                       AiMISR::Field::row_addr,
+                                                       AiMISR::Field::col_addr,
+                                                       AiMISR::Field::thread_index},
+                                                      false, // channel_count_eq_opsize
+                                                      false, // channel_count_eq_one
+                                                      false  // AiM_DMA_blocking
+        );
+
+        aim_opcode_to_str[Request::Opcode::ISR_AF] = "ISR_AF";
+        opcode_str_to_aim_ISR["ISR_AF"] = AiMISR(Request::Opcode::ISR_AF,
+                                                 {AiMISR::Field::opsize,
+                                                  AiMISR::Field::channel_mask,
+                                                  AiMISR::Field::thread_index},
+                                                 true,  // channel_count_eq_opsize
+                                                 false, // channel_count_eq_one
+                                                 false  // AiM_DMA_blocking
+        );
+
+        aim_opcode_to_str[Request::Opcode::ISR_EWMUL] = "ISR_EWMUL";
+        opcode_str_to_aim_ISR["ISR_EWMUL"] = AiMISR(Request::Opcode::ISR_EWMUL,
+                                                    {AiMISR::Field::opsize,
+                                                     AiMISR::Field::channel_mask,
+                                                     AiMISR::Field::bank_index,
+                                                     AiMISR::Field::row_addr,
+                                                     AiMISR::Field::col_addr},
+                                                    false, // channel_count_eq_opsize
+                                                    false, // channel_count_eq_one
+                                                    false  // AiM_DMA_blocking
+        );
+
+        aim_opcode_to_str[Request::Opcode::ISR_EWADD] = "ISR_EWADD";
+        opcode_str_to_aim_ISR["ISR_EWADD"] = AiMISR(Request::Opcode::ISR_EWADD,
+                                                    {AiMISR::Field::opsize,
+                                                     AiMISR::Field::GPR_addr_0,
+                                                     AiMISR::Field::GPR_addr_1},
+                                                    false, // channel_count_eq_opsize
+                                                    false, // channel_count_eq_one
+                                                    false  // AiM_DMA_blocking
+        );
+
+        aim_opcode_to_str[Request::Opcode::ISR_EOC] = "ISR_EOC";
+        opcode_str_to_aim_ISR["ISR_EOC"] = AiMISR(Request::Opcode::ISR_EOC,
+                                                  {},
+                                                  false, // channel_count_eq_opsize
+                                                  false, // channel_count_eq_one
+                                                  false  // AiM_DMA_blocking
+        );
+
+        str_to_type["R"] = Request::Type::Read;
+        type_to_str[Request::Type::Read] = "R";
+        str_to_type["W"] = Request::Type::Write;
+        type_to_str[Request::Type::Write] = "W";
+        str_to_type["AiM"] = Request::Type::AIM;
+        type_to_str[Request::Type::AIM] = "AiM";
+
+        str_to_mem_access_region["GPR"] = Request::MemAccessRegion::GPR;
+        mem_access_region_to_str[Request::MemAccessRegion::GPR] = "GPR";
+        str_to_mem_access_region["CFR"] = Request::MemAccessRegion::CFR;
+        mem_access_region_to_str[Request::MemAccessRegion::CFR] = "CFR";
+        str_to_mem_access_region["MEM"] = Request::MemAccessRegion::MEM;
+        mem_access_region_to_str[Request::MemAccessRegion::MEM] = "MEM";
+    }
+
+    static bool type_valid(std::string type_str) {
+        if (str_to_type.size() == 0)
+            throw ConfigurationError("AiMISRInfo not initialized!");
+
+        if (str_to_type.find(type_str) == str_to_type.end())
+            return false;
+        return true;
+    }
+
+    static bool type_valid(Request::Type type) {
+        if (type_to_str.size() == 0)
+            throw ConfigurationError("AiMISRInfo not initialized!");
+
+        if (type_to_str.find(type) == type_to_str.end())
+            return false;
+        return true;
+    }
+
+    static Request::Type convert_str_to_type(std::string type_str) {
+        if (type_valid(type_str) == false) {
+            throw ConfigurationError("Trace: unknown type {}!", type_str);
+        }
+        return str_to_type[type_str];
+    }
+
+    static std::string convert_type_to_str(Request::Type type) {
+        if (type_valid(type) == false) {
+            throw ConfigurationError("Trace: unknown type {}!", (int)type);
+        }
+        return type_to_str[type];
+    }
+
+    static bool AiM_opcode_valid(std::string AiM_opcode_str) {
+        if (opcode_str_to_aim_ISR.size() == 0)
+            throw ConfigurationError("AiMISRInfo not initialized!");
+
+        if (opcode_str_to_aim_ISR.find(AiM_opcode_str) == opcode_str_to_aim_ISR.end())
+            return false;
+        return true;
+    }
+
+    static bool AiM_opcode_valid(Request::Opcode AiM_opcode) {
+        if (aim_opcode_to_str.size() == 0)
+            throw ConfigurationError("AiMISRInfo not initialized!");
+
+        if (aim_opcode_to_str.find(AiM_opcode) == aim_opcode_to_str.end())
+            return false;
+        return true;
+    }
+
+    static AiMISR convert_opcode_str_to_AiM_ISR(std::string AiM_opcode_str) {
+        if (AiM_opcode_valid(AiM_opcode_str) == false) {
+            throw ConfigurationError("Trace: unknown AiM opcode {}!", AiM_opcode_str);
+        }
+        return opcode_str_to_aim_ISR[AiM_opcode_str];
+    }
+
+    static AiMISR convert_AiM_opcode_to_AiM_ISR(Request::Opcode AiM_opcode) {
+        return opcode_str_to_aim_ISR[convert_AiM_opcode_to_str(AiM_opcode)];
+    }
+
+    static std::string convert_AiM_opcode_to_str(Request::Opcode AiM_opcode) {
+        if (AiM_opcode_valid(AiM_opcode) == false) {
+            throw ConfigurationError("Trace: unknown AiM opcode {}!", (int)AiM_opcode);
+        }
+        return aim_opcode_to_str[AiM_opcode];
+    }
+
+    static bool mem_access_region_valid(std::string mem_access_region_str) {
+        if (str_to_mem_access_region.size() == 0)
+            throw ConfigurationError("AiMISRInfo not initialized!");
+
+        if (str_to_mem_access_region.find(mem_access_region_str) == str_to_mem_access_region.end())
+            return false;
+        return true;
+    }
+
+    static bool mem_access_region_valid(Request::MemAccessRegion mem_access_region) {
+        if (mem_access_region_to_str.size() == 0)
+            throw ConfigurationError("AiMISRInfo not initialized!");
+
+        if (mem_access_region_to_str.find(mem_access_region) == mem_access_region_to_str.end())
+            return false;
+        return true;
+    }
+
+    static Request::MemAccessRegion convert_str_to_mem_access_region(std::string mem_access_region_str) {
+        if (mem_access_region_valid(mem_access_region_str) == false) {
+            throw ConfigurationError("Trace: unknown mem_access_region {}!", mem_access_region_str);
+        }
+        return str_to_mem_access_region[mem_access_region_str];
+    }
+
+    static std::string convert_mem_access_region_to_str(Request::MemAccessRegion mem_access_region) {
+        if (mem_access_region_valid(mem_access_region) == false) {
+            throw ConfigurationError("Trace: unknown mem_access_region {}!", (int)mem_access_region);
+        }
+        return mem_access_region_to_str[mem_access_region];
+    }
+};
+
+static AiMISRInfo AiM_host_request_info();
 
 struct ReqBuffer {
     std::list<Request> buffer;
