@@ -28,6 +28,8 @@ protected:
 
     int stalled_AiM_requests = 0;
 
+    std::function<void(Request &)> callback;
+
     enum class CFR {
         BROADCAST,
         EWMUL_BG,
@@ -94,6 +96,8 @@ public:
         // Activation Function mode selects AF (0-7)
         address_to_CFR[0x001C] = CFR::AFM;
         CFR_values[CFR::AFM] = 0;
+
+        callback = receive;
 
         register_stat(m_clk).name("memory_system_cycles");
         register_stat(s_wait_RD_stall)
@@ -366,7 +370,7 @@ public:
         }
     };
 
-    static void callback(Request &req) {
+    void receive(Request &req) {
         if (req.host_req_id != request_queue.front().)
     }
 
