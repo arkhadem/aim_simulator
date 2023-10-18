@@ -97,7 +97,7 @@ public:
         address_to_CFR[0x001C] = CFR::AFM;
         CFR_values[CFR::AFM] = 0;
 
-        callback = receive;
+        callback = std::bind(&AiMDRAMSystem::receive, this, std::placeholders::_1);
 
         register_stat(m_clk).name("memory_system_cycles");
         register_stat(s_wait_RD_stall)
@@ -371,7 +371,16 @@ public:
     };
 
     void receive(Request &req) {
-        if (req.host_req_id != request_queue.front().)
+        Request host_req = request_queue.front();
+        if (req.host_req_id != host_req.host_req_id)
+            throw ConfigurationError("AiMDRAMSystem: received request id {} != head of the queue request id {}!", req.host_req_id, host_req.host_req_id);
+
+        stalled_AiM_requests--;
+
+        if (stalled_AiM_requests == 0) {
+            host_req.callback(host_req);
+            request_queue.pop();
+        }
     }
 
     float get_tCK() override {
