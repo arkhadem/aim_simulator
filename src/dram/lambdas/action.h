@@ -14,13 +14,14 @@ inline constexpr bool false_v = false;
 namespace Action {
 namespace Bank {
 template <class T>
-void ACT(typename T::Node *node, int cmd, int target_id, Clk_t clk) {
+void ACT(typename T::Node *node, int cmd, const AddrVec_t &addr_vec, Clk_t clk) {
+    int target_id = addr_vec[node->m_level + 1];
     node->m_state = T::m_states["Opened"];
     node->m_row_state[target_id] = T::m_states["Opened"];
 };
 
 template <class T>
-void PRE(typename T::Node *node, int cmd, int target_id, Clk_t clk) {
+void PRE(typename T::Node *node, int cmd, const AddrVec_t &addr_vec, Clk_t clk) {
     node->m_state = T::m_states["Closed"];
     node->m_row_state.clear();
 };
@@ -28,7 +29,8 @@ void PRE(typename T::Node *node, int cmd, int target_id, Clk_t clk) {
 
 namespace BankGroup {
 template <class T>
-void PREsb(typename T::Node *node, int cmd, int target_id, Clk_t clk) {
+void PREsb(typename T::Node *node, int cmd, const AddrVec_t &addr_vec, Clk_t clk) {
+    int target_id = addr_vec[node->m_level + 1];
     typename T::Node *rank = node->m_parent_node;
     for (auto bg : rank->m_child_nodes) {
         for (auto bank : bg->m_child_nodes) {
@@ -41,7 +43,8 @@ void PREsb(typename T::Node *node, int cmd, int target_id, Clk_t clk) {
 };
 
 template <class T>
-void SameBankActions(typename T::Node *node, int cmd, int target_id, Clk_t clk) {
+void SameBankActions(typename T::Node *node, int cmd, const AddrVec_t &addr_vec, Clk_t clk) {
+    int target_id = addr_vec[node->m_level + 1];
     AddrVec_t same_bank_addr(T::m_levels.size(), -1);
     same_bank_addr[T::m_levels["bank"]] = target_id;
 
@@ -54,11 +57,28 @@ void SameBankActions(typename T::Node *node, int cmd, int target_id, Clk_t clk) 
         }
     }
 }
+template <class T>
+void ACT4b(typename T::Node *node, int cmd, const AddrVec_t &addr_vec, Clk_t clk) {
+    assert(node->m_level == T::m_levels["bankgroup"]);
+    int target_id = addr_vec[T::m_levels["row"]];
+    for (auto bank : node->m_child_nodes) {
+        bank->m_state = T::m_states["Opened"];
+        bank->m_row_state[target_id] = T::m_states["Opened"];
+    }
+}
+template <class T>
+void PRE4b(typename T::Node *node, int cmd, const AddrVec_t &addr_vec, Clk_t clk) {
+    assert(node->m_level == T::m_levels["bankgroup"]);
+    for (auto bank : node->m_child_nodes) {
+        bank->m_state = T::m_states["Closed"];
+        bank->m_row_state.clear();
+    }
+}
 } // namespace BankGroup
 
 namespace Rank {
 template <class T>
-void PREab(typename T::Node *node, int cmd, int target_id, Clk_t clk) {
+void PREab(typename T::Node *node, int cmd, const AddrVec_t &addr_vec, Clk_t clk) {
     if constexpr (T::m_levels["bank"] - T::m_levels["rank"] == 1) {
         for (auto bank : node->m_child_nodes) {
             bank->m_state = T::m_states["Closed"];
@@ -79,7 +99,8 @@ void PREab(typename T::Node *node, int cmd, int target_id, Clk_t clk) {
 };
 
 template <class T>
-void PREsb(typename T::Node *node, int cmd, int target_id, Clk_t clk) {
+void PREsb(typename T::Node *node, int cmd, const AddrVec_t &addr_vec, Clk_t clk) {
+    int target_id = addr_vec[node->m_level + 1];
     for (auto bg : node->m_child_nodes) {
         for (auto bank : bg->m_child_nodes) {
             if (bank->m_node_id == target_id) {
@@ -95,7 +116,32 @@ void PREsb(typename T::Node *node, int cmd, int target_id, Clk_t clk) {
 namespace Channel {
 // TODO: Make these nicer...
 template <class T>
-void PREab(typename T::Node *node, int cmd, int target_id, Clk_t clk) {
+void ACTab(typename T::Node *node, int cmd, const AddrVec_t &addr_vec, Clk_t clk) {
+    int target_id = addr_vec[T::m_levels["row"]];
+    if constexpr (T::m_levels["bank"] - T::m_levels["channel"] == 2) {
+        for (auto bg : node->m_child_nodes) {
+            for (auto bank : bg->m_child_nodes) {
+                bank->m_state = T::m_states["Opened"];
+                bank->m_row_state[target_id] = T::m_states["Opened"];
+            }
+        }
+    } else if constexpr (T::m_levels["bank"] - T::m_levels["channel"] == 3) {
+        for (auto pc : node->m_child_nodes) {
+            for (auto bg : pc->m_child_nodes) {
+                for (auto bank : bg->m_child_nodes) {
+                    bank->m_state = T::m_states["Opened"];
+                    bank->m_row_state[target_id] = T::m_states["Opened"];
+                }
+            }
+        }
+    } else {
+        static_assert(
+            false_v<T>,
+            "[Action::Rank] Unsupported organization. Please write your own PREab function.");
+    }
+};
+template <class T>
+void PREab(typename T::Node *node, int cmd, const AddrVec_t &addr_vec, Clk_t clk) {
     if constexpr (T::m_levels["bank"] - T::m_levels["channel"] == 2) {
         for (auto bg : node->m_child_nodes) {
             for (auto bank : bg->m_child_nodes) {

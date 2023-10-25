@@ -148,7 +148,6 @@ public:
         "WRA",
         "REFab",
         "REFpb",
-        "REFp2b",
         "ACT4",
         "ACT16",
         "PRE4",
@@ -161,34 +160,33 @@ public:
         "WRGB",
         "RDMAC16",
         "RDAF16",
-        "WRMAC",
+        "WRMAC16",
     };
 
     inline static const ImplLUT m_command_scopes = LUT(
         m_commands, m_levels, {
-                                  {"REFab", "bank"},
-                                  {"REFp2b", "bank"},
+                                  {"REFab", "channel"},
                                   {"REFpb", "bank"},
-                                  {"ACT16", "row"},
-                                  {"ACT4", "row"},
+                                  {"ACT16", "channel"},
+                                  {"ACT4", "bankgroup"},
                                   {"ACT", "row"},
-                                  {"PREA", "bank"},
-                                  {"PRE4", "bank"},
+                                  {"PREA", "channel"},
+                                  {"PRE4", "bankgroup"},
                                   {"PRE", "bank"},
                                   {"RD", "column"},
                                   {"WR", "column"},
                                   {"RDA", "column"},
                                   {"WRA", "column"},
                                   {"MAC", "column"},
-                                  {"MAC16", "column"},
-                                  {"AF16", "bank"},
-                                  {"EWMUL16", "column"},
+                                  {"MAC16", "channel"},
+                                  {"AF16", "channel"},
+                                  {"EWMUL16", "channel"},
                                   {"RDCP", "column"},
                                   {"WRCP", "column"},
                                   {"WRGB", "channel"},
-                                  {"RDMAC16", "bank"},
-                                  {"RDAF16", "bank"},
-                                  {"WRMAC", "bank"},
+                                  {"RDMAC16", "channel"},
+                                  {"RDAF16", "channel"},
+                                  {"WRMAC16", "bank"},
                               });
 
     inline static const ImplLUT m_command_meta = LUT<DRAMCommandMeta>(
@@ -203,7 +201,6 @@ public:
                         {"WRA", {false, true, true, false}},
                         {"REFab", {false, false, false, true}}, //double check
                         {"REFpb", {false, false, false, true}},
-                        {"REFp2b", {false, false, false, true}},
                         {"ACT4", {true, false, false, false}},
                         {"ACT16", {true, false, false, false}},
                         {"PRE4", {false, true, false, false}},
@@ -216,7 +213,7 @@ public:
                         {"WRGB", {false, false, false, false}},
                         {"RDMAC16", {false, false, false, false}},
                         {"RDAF16", {false, false, false, false}},
-                        {"WRMAC", {false, false, false, false}},
+                        {"WRMAC16", {false, false, false, false}},
                     });
 
     inline static constexpr ImplDef m_requests = {
@@ -257,7 +254,7 @@ public:
                                         {"MIN", "UNKNOWN"},          // 0 - Unknown and illegal
                                         {"ISR_WR_SBK", "WR"},        // 1 - Write single bank
                                         {"ISR_WR_GB", "WRGB"},       // 2 - Write global buffer
-                                        {"ISR_WR_BIAS", "WRMAC"},    // 3 - Write all MAC registers
+                                        {"ISR_WR_BIAS", "WRMAC16"},  // 3 - Write all MAC registers
                                         {"ISR_WR_AFLUT", "UNKNOWN"}, // 4 - Unknown and illegal
                                         {"ISR_RD_MAC", "RDMAC16"},   // 5 - Read all MAC registers
                                         {"ISR_RD_AF", "RDAF16"},     // 6 - Read all AF16 registers
@@ -325,8 +322,8 @@ public:
 
         set_actions();
         set_preqs();
-        set_rowhits();
-        set_rowopens();
+        // set_rowhits();
+        // set_rowopens();
 
         create_nodes();
     };
@@ -348,6 +345,7 @@ public:
     };
 
     bool check_rowbuffer_hit(int command, const AddrVec_t &addr_vec) override {
+        assert(false); // Not implemented
         int channel_id = addr_vec[m_levels["channel"]];
         return m_channels[channel_id]->check_rowbuffer_hit(command, addr_vec, m_clk);
     };
@@ -544,14 +542,14 @@ private:
 // Populate the timing constraints
 #define V(timing) (m_timing_vals(timing))
         populate_timingcons(this, {
-                                      /*** Channel ***/
+                                      /****************************************************** Channel ******************************************************/
                                       // CAS <-> CAS
                                       /// External data bus occupancy
                                       /// AiM commands that transfer data on the external bus
                                       /// RD: RDMAC16 and RDAF16
-                                      /// WR: WRGB and WRMAC
+                                      /// WR: WRGB and WRMAC16
                                       {.level = "channel", .preceding = {"RD", "RDA", "RDMAC16", "RDAF16"}, .following = {"RD", "RDA", "RDMAC16", "RDAF16"}, .latency = V("nBL")},
-                                      {.level = "channel", .preceding = {"WR", "WRA", "WRGB", "WRMAC"}, .following = {"WR", "WRA", "WRGB", "WRMAC"}, .latency = V("nBL")},
+                                      {.level = "channel", .preceding = {"WR", "WRA", "WRGB", "WRMAC16"}, .following = {"WR", "WRA", "WRGB", "WRMAC16"}, .latency = V("nBL")},
 
                                       /*** Rank (or different BankGroup) ***/
 
@@ -559,33 +557,49 @@ private:
                                       /// nCCDS is the minimal latency for column commands that access to a different bank group
                                       /// AiM commands that transfer data on the bus shared between BGs
                                       /// RD: RDMAC16, RDAF16, and RDCP
-                                      /// WR: WRGB, WRMAC, and WRCP
+                                      /// WR: WRGB, WRMAC16, and WRCP
                                       {.level = "channel", .preceding = {"RD", "RDA", "RDMAC16", "RDAF16", "RDCP"}, .following = {"RD", "RDA", "RDMAC16", "RDAF16", "RDCP"}, .latency = V("nCCDS")},
-                                      {.level = "channel", .preceding = {"WR", "WRA", "WRGB", "WRMAC", "WRCP"}, .following = {"WR", "WRA", "WRGB", "WRMAC", "WRCP"}, .latency = V("nCCDS")},
+                                      {.level = "channel", .preceding = {"WR", "WRA", "WRGB", "WRMAC16", "WRCP"}, .following = {"WR", "WRA", "WRGB", "WRMAC16", "WRCP"}, .latency = V("nCCDS")},
+
+                                      /// nCCDL is the minimal latency for column commands that access to the same bank group
+                                      /// AiM commands that transfer data on the bus shared inside a BG
+                                      /// RD: RDMAC16, RDAF16, and RDCP
+                                      /// WR: WRMAC16, and WRCP
+                                      {.level = "channel", .preceding = {"RD", "RDA", "RDMAC16", "RDAF16", "RDCP"}, .following = {"RDMAC16", "RDAF16"}, .latency = V("nCCDL")},
+                                      {.level = "channel", .preceding = {"RDMAC16", "RDAF16"}, .following = {"RD", "RDA", "RDMAC16", "RDAF16", "RDCP"}, .latency = V("nCCDL")},
+                                      {.level = "channel", .preceding = {"WR", "WRA", "WRMAC16", "WRCP"}, .following = {"WRMAC16"}, .latency = V("nCCDL")},
+                                      {.level = "channel", .preceding = {"WRMAC16"}, .following = {"WR", "WRA", "WRMAC16", "WRCP"}, .latency = V("nCCDL")},
 
                                       /// RD <-> WR
                                       /// Minimum Read to Write (READ or RDTR to WRITE or WRTR command delay)
                                       /// AiM commands that transfer data on the external bus
                                       /// RD: RDMAC16 and RDAF16
-                                      /// WR: WRGB and WRMAC
+                                      /// WR: WRGB and WRMAC16
                                       /// The next timing is tRTW
                                       {.level = "channel", .preceding = {"RD", "RDA"}, .following = {"WR", "WRA"}, .latency = V("nCL") + V("nBL") + 3 - V("nCWL") + V("nWPRE")},
                                       {.level = "channel", .preceding = {"RDMAC16", "RDAF16"}, .following = {"WR", "WRA"}, .latency = V("nCLREG") + V("nBL") + 3 - V("nCWL") + V("nWPRE")},
-                                      {.level = "channel", .preceding = {"RD", "RDA"}, .following = {"WRGB", "WRMAC"}, .latency = V("nCL") + V("nBL") + 3 - V("nCWLREG") + V("nWPRE")},
-                                      {.level = "channel", .preceding = {"RDMAC16", "RDAF16"}, .following = {"WRGB", "WRMAC"}, .latency = V("nCLREG") + V("nBL") + 3 - V("nCWLREG") + V("nWPRE")},
+                                      {.level = "channel", .preceding = {"RD", "RDA"}, .following = {"WRGB", "WRMAC16"}, .latency = V("nCL") + V("nBL") + 3 - V("nCWLREG") + V("nWPRE")},
+                                      {.level = "channel", .preceding = {"RDMAC16", "RDAF16"}, .following = {"WRGB", "WRMAC16"}, .latency = V("nCLREG") + V("nBL") + 3 - V("nCWLREG") + V("nWPRE")},
 
                                       /// WR <-> RD
                                       /// Minimum Read after Write
-                                      /// AiM commands that transfer data on the external bus
+                                      /// AiM commands that transfer data on the external bus, based on the bus shared between BGs
                                       /// RD: RDMAC16 and RDAF16
-                                      /// WR: WRGB and WRMAC
+                                      /// WR: WRGB and WRMAC16
                                       {.level = "channel", .preceding = {"WR", "WRA"}, .following = {"RD", "RDA"}, .latency = V("nCWL") + V("nBL") + V("nWTRS")},
                                       {.level = "channel", .preceding = {"WR", "WRA"}, .following = {"RDMAC16", "RDAF16"}, .latency = V("nCWL") + V("nBL") + V("nWTRS")},
-                                      {.level = "channel", .preceding = {"WRGB", "WRMAC"}, .following = {"RD", "RDA"}, .latency = V("nCWLREG") + V("nBL") + V("nWTRS")},
-                                      {.level = "channel", .preceding = {"WRGB", "WRMAC"}, .following = {"RDMAC16", "RDAF16"}, .latency = V("nCWLREG") + V("nBL") + V("nWTRS")},
+                                      {.level = "channel", .preceding = {"WRGB", "WRMAC16"}, .following = {"RD", "RDA"}, .latency = V("nCWLREG") + V("nBL") + V("nWTRS")},
+                                      {.level = "channel", .preceding = {"WRGB", "WRMAC16"}, .following = {"RDMAC16", "RDAF16"}, .latency = V("nCWLREG") + V("nBL") + V("nWTRS")},
+
+                                      /// AiM commands that transfer data on the external bus, based on the bus shared inside a BG
+                                      /// RD: RDMAC16 and RDAF16
+                                      /// WR: WRMAC16
+                                      {.level = "channel", .preceding = {"WR", "WRA"}, .following = {"RDMAC16", "RDAF16"}, .latency = V("nCWL") + V("nBL") + V("nWTRL")},
+                                      {.level = "channel", .preceding = {"WRMAC16"}, .following = {"RD", "RDA"}, .latency = V("nCWLREG") + V("nBL") + V("nWTRL")},
+                                      {.level = "channel", .preceding = {"WRMAC16"}, .following = {"RDMAC16", "RDAF16"}, .latency = V("nCWLREG") + V("nBL") + V("nWTRL")},
 
                                       // What about the contention of the bus shared between BGs for:
-                                      // ("RDCP" -> {"WR", "WRA", "WRGB", "WRMAC"}) IDK. There is no internal READ to WRITE delay.
+                                      // ("RDCP" -> {"WR", "WRA", "WRGB", "WRMAC16"}) IDK. There is no internal READ to WRITE delay.
                                       // ("WRCP" -> {"RD", "RDA", "RDMAC16", "RDAF16"}) my guess is V("nWTRS")
                                       // ("RDCP" <-> "WRCP") IDK. There is no internal READ to WRITE delay.
 
@@ -630,35 +644,32 @@ private:
                                       // "A minimum time tRFCab is required between two REFab commands. The same rule applies to any access command after the refresh operation."
                                       {.level = "channel", .preceding = {"REFab"}, .following = {"ACT", "ACT4", "ACT16"}, .latency = V("nRFC")},
 
-                                      /// RAS <-> REFpb/REFp2b
-                                      // "A minimum time tRRD is required between an ACTIVATE command and a REFpb / REFp2b command to a different bank."
-                                      {.level = "channel", .preceding = {"ACT", "ACT4", "ACT16"}, .following = {"REFpb", "REFp2b"}, .latency = V("nRRDL")}, // Why RRDL? Shouldn't it be RRDS?
-                                      // "The selected bank must be precharged prior to the REFpb / REFp2b command"
-                                      {.level = "channel", .preceding = {"ACT16"}, .following = {"REFpb", "REFp2b"}, .latency = V("nRC")}, // Why nRC? Shouldn't it be nRAS + nRP? This never happens bevause ACT opens a row and REF's pre-requisite for an open row is PRE
-                                      {.level = "channel", .preceding = {"PRE16"}, .following = {"REFpb", "REFp2b"}, .latency = V("nRP")},
-                                      // "A minimum time tRFCpb is required between a REFpb / REFp2b command and an access command to the same bank that follows"
-                                      {.level = "channel", .preceding = {"REFpb", "REFp2b"}, .following = {"ACT16"}, .latency = V("nRFCpb")},
-                                      // "A minimum time tRREFD is required between a  REFpb / REFp2b command and an ACTIVATE command to a different bank"
-                                      {.level = "channel", .preceding = {"REFpb", "REFp2b"}, .following = {"ACT", "ACT4", "ACT16"}, .latency = V("nRREFD")},
+                                      /// RAS <-> REFpb
+                                      // "A minimum time tRRD is required between an ACTIVATE command and a REFpb command to a different bank."
+                                      {.level = "channel", .preceding = {"ACT", "ACT4", "ACT16"}, .following = {"REFpb"}, .latency = V("nRRDL")}, // Why RRDL? Shouldn't it be RRDS?
+                                      // "The selected bank must be precharged prior to the REFpb command"
+                                      {.level = "channel", .preceding = {"ACT16"}, .following = {"REFpb"}, .latency = V("nRC")}, // Why nRC? Shouldn't it be nRAS + nRP? This never happens bevause ACT opens a row and REF's pre-requisite for an open row is PRE
+                                      {.level = "channel", .preceding = {"PRE16"}, .following = {"REFpb"}, .latency = V("nRP")},
+                                      // "A minimum time tRFCpb is required between a REFpb command and an access command to the same bank that follows"
+                                      {.level = "channel", .preceding = {"REFpb"}, .following = {"ACT16"}, .latency = V("nRFCpb")},
+                                      // "A minimum time tRREFD is required between a  REFpb command and an ACTIVATE command to a different bank"
+                                      {.level = "channel", .preceding = {"REFpb"}, .following = {"ACT", "ACT4", "ACT16"}, .latency = V("nRREFD")},
 
-                                      /*** Same Bank Group ***/
+                                      /****************************************************** Bank Group ******************************************************/
                                       /// CAS <-> CAS
                                       /// nCCDL is the minimal latency for column commands that access to the same bank group
                                       /// AiM commands that transfer data on the bus shared inside a BG
-                                      /// RD: RDMAC16, RDAF16, and RDCP
-                                      /// WR: WRGB, WRMAC, and WRCP
-                                      {.level = "bankgroup", .preceding = {"RD", "RDA", "RDMAC16", "RDAF16", "RDCP"}, .following = {"RD", "RDA", "RDMAC16", "RDAF16", "RDCP"}, .latency = V("nCCDL")},
-                                      {.level = "bankgroup", .preceding = {"WR", "WRA", "WRGB", "WRMAC", "WRCP"}, .following = {"WR", "WRA", "WRGB", "WRMAC", "WRCP"}, .latency = V("nCCDL")},
+                                      /// RD: RDCP
+                                      /// WR: WRCP
+                                      {.level = "bankgroup", .preceding = {"RD", "RDA", "RDCP"}, .following = {"RD", "RDA", "RDCP"}, .latency = V("nCCDL")},
+                                      {.level = "bankgroup", .preceding = {"WR", "WRA", "WRCP"}, .following = {"WR", "WRA", "WRCP"}, .latency = V("nCCDL")},
 
                                       /// WR <-> RD
                                       /// Minimum Read after Write
-                                      /// AiM commands that transfer data on the external bus
-                                      /// RD: RDMAC16 and RDAF16
-                                      /// WR: WRGB and WRMAC
+                                      /// AiM commands that transfer data on the external bus, based on the bus shared inside a BG
+                                      /// RD:
+                                      /// WR:
                                       {.level = "bankgroup", .preceding = {"WR", "WRA"}, .following = {"RD", "RDA"}, .latency = V("nCWL") + V("nBL") + V("nWTRL")},
-                                      {.level = "bankgroup", .preceding = {"WR", "WRA"}, .following = {"RDMAC16", "RDAF16"}, .latency = V("nCWL") + V("nBL") + V("nWTRL")},
-                                      {.level = "bankgroup", .preceding = {"WRGB", "WRMAC"}, .following = {"RD", "RDA"}, .latency = V("nCWLREG") + V("nBL") + V("nWTRL")},
-                                      {.level = "bankgroup", .preceding = {"WRGB", "WRMAC"}, .following = {"RDMAC16", "RDAF16"}, .latency = V("nCWLREG") + V("nBL") + V("nWTRL")},
 
                                       // Nothing for Read to Write?
 
@@ -669,7 +680,7 @@ private:
                                       // "READ to PRECHARGE within the same bank group"
                                       {.level = "bankgroup", .preceding = {"RD", "RDCP", "MAC"}, .following = {"PRE", "PRE4"}, .latency = V("nRTP")},
                                       // "Not based on the GDDR6 document"
-                                      {.level = "bankgroup", .preceding = {"WR", "WRCP"}, .following = {"PRE", "PRE4"}, .latency = V("nCWL") + V("nBL") + V("nWR")}, // Not sure if we have to consider nBL for WRCP or EWMUL16
+                                      {.level = "bankgroup", .preceding = {"WR", "WRCP"}, .following = {"PRE", "PRE4"}, .latency = V("nCWL") + V("nBL") + V("nWR")},
 
                                       /// RAS <-> RAS
                                       // "ACTIVATE to ACTIVATE in the same bank group"
@@ -681,12 +692,12 @@ private:
                                       {.level = "bankgroup", .preceding = {"PRE", "PRE4"}, .following = {"ACT4"}, .latency = V("nRP")},
                                       {.level = "bankgroup", .preceding = {"PRE4"}, .following = {"ACT"}, .latency = V("nRP")},
 
-                                      /// RAS <-> REFpb/REFp2b
-                                      // "The selected bank must be precharged prior to the REFpb / REFp2b command"
-                                      {.level = "bankgroup", .preceding = {"ACT4"}, .following = {"REFpb", "REFp2b"}, .latency = V("nRC")}, // Why nRC? Shouldn't it be nRAS + nRP? This never happens bevause ACT opens a row and REF's pre-requisite for an open row is PRE
-                                      {.level = "bankgroup", .preceding = {"PRE4"}, .following = {"REFpb", "REFp2b"}, .latency = V("nRP")},
-                                      // "A minimum time tRFCpb is required between a REFpb / REFp2b command and an access command to the same bank that follows"
-                                      {.level = "bankgroup", .preceding = {"REFpb", "REFp2b"}, .following = {"ACT4"}, .latency = V("nRFCpb")},
+                                      /// RAS <-> REFpb
+                                      // "The selected bank must be precharged prior to the REFpb command"
+                                      {.level = "bankgroup", .preceding = {"ACT4"}, .following = {"REFpb"}, .latency = V("nRC")}, // Why nRC? Shouldn't it be nRAS + nRP? This never happens bevause ACT opens a row and REF's pre-requisite for an open row is PRE
+                                      {.level = "bankgroup", .preceding = {"PRE4"}, .following = {"REFpb"}, .latency = V("nRP")},
+                                      // "A minimum time tRFCpb is required between a REFpb command and an access command to the same bank that follows"
+                                      {.level = "bankgroup", .preceding = {"REFpb"}, .following = {"ACT4"}, .latency = V("nRFCpb")},
 
                                       /// CAS <-> RAS
                                       // "An ACTIVATE (ACT) command is required to be issued before the READ command to the same bank, and tRCDRD must be met."
@@ -694,7 +705,7 @@ private:
                                       // "An ACTIVATE (ACT) command is required to be issued before the WRITE command to the same bank, and tRCDWR must be met."
                                       {.level = "bankgroup", .preceding = {"ACT4"}, .following = {"WR", "WRA", "WRCP"}, .latency = V("nRCDWR")},
 
-                                      /*** Bank ***/
+                                      /****************************************************** Bank ******************************************************/
                                       /// CAS <-> RAS
                                       // "An ACTIVATE (ACT) command is required to be issued before the READ command to the same bank, and tRCDRD must be met."
                                       {.level = "bank", .preceding = {"ACT"}, .following = {"RD", "RDA", "RDCP", "MAC"}, .latency = V("nRCDRD")},
@@ -710,14 +721,14 @@ private:
                                       {.level = "bank", .preceding = {"RDA"}, .following = {"ACT"}, .latency = V("nRTP") + V("nRP")},
                                       {.level = "bank", .preceding = {"WRA"}, .following = {"ACT"}, .latency = V("nCWL") + V("nBL") + V("nWR") + V("nRP")},
 
-                                      /// RAS <-> REFpb/REFp2b
-                                      // "The selected bank must be precharged prior to the REFpb / REFp2b command"
-                                      {.level = "bank", .preceding = {"ACT"}, .following = {"REFpb", "REFp2b"}, .latency = V("nRC")}, // Why nRC? Shouldn't it be nRAS + nRP? This never happens bevause ACT opens a row and REF's pre-requisite for an open row is PRE
-                                      {.level = "bank", .preceding = {"PRE"}, .following = {"REFpb", "REFp2b"}, .latency = V("nRP")},
-                                      {.level = "bank", .preceding = {"RDA"}, .following = {"REFpb", "REFp2b"}, .latency = V("nRTP") + V("nRP")},
-                                      {.level = "bank", .preceding = {"WRA"}, .following = {"REFpb", "REFp2b"}, .latency = V("nCWL") + V("nBL") + V("nWR") + V("nRP")},
-                                      // "A minimum time tRFCpb is required between a REFpb / REFp2b command and an access command to the same bank that follows"
-                                      {.level = "bank", .preceding = {"REFpb", "REFp2b"}, .following = {"ACT"}, .latency = V("nRFCpb")},
+                                      /// RAS <-> REFpb
+                                      // "The selected bank must be precharged prior to the REFpb command"
+                                      {.level = "bank", .preceding = {"ACT"}, .following = {"REFpb"}, .latency = V("nRC")}, // Why nRC? Shouldn't it be nRAS + nRP? This never happens bevause ACT opens a row and REF's pre-requisite for an open row is PRE
+                                      {.level = "bank", .preceding = {"PRE"}, .following = {"REFpb"}, .latency = V("nRP")},
+                                      {.level = "bank", .preceding = {"RDA"}, .following = {"REFpb"}, .latency = V("nRTP") + V("nRP")},
+                                      {.level = "bank", .preceding = {"WRA"}, .following = {"REFpb"}, .latency = V("nCWL") + V("nBL") + V("nWR") + V("nRP")},
+                                      // "A minimum time tRFCpb is required between a REFpb command and an access command to the same bank that follows"
+                                      {.level = "bank", .preceding = {"REFpb"}, .following = {"ACT"}, .latency = V("nRFCpb")},
 
                                   });
 #undef V
@@ -728,6 +739,11 @@ private:
 
         // Channel Actions
         m_actions[m_levels["channel"]][m_commands["PREA"]] = Lambdas::Action::Channel::PREab<GDDR6>;
+        m_actions[m_levels["channel"]][m_commands["ACT16"]] = Lambdas::Action::Channel::ACTab<GDDR6>;
+
+        // Bank Group Actions
+        m_actions[m_levels["bankgroup"]][m_commands["PRE4"]] = Lambdas::Action::BankGroup::PRE4b<GDDR6>;
+        m_actions[m_levels["bankgroup"]][m_commands["ACT4"]] = Lambdas::Action::BankGroup::ACT4b<GDDR6>;
 
         // Bank actions
         m_actions[m_levels["bank"]][m_commands["ACT"]] = Lambdas::Action::Bank::ACT<GDDR6>;
@@ -746,43 +762,46 @@ private:
         m_preqs[m_levels["bank"]][m_commands["RD"]] = Lambdas::Preq::Bank::RequireRowOpen<GDDR6>;
         m_preqs[m_levels["bank"]][m_commands["WR"]] = Lambdas::Preq::Bank::RequireRowOpen<GDDR6>;
         //m_preqs[m_levels["channel"]][m_commands["REFpb"]] = Lambdas::Preq::Bank::RequireAllBanksClosed<GDDR6>; // can RequireSameBanksClosed be used, or is RequireBankClosed needed?
-        //m_preqs[m_levels["channel"]][m_commands["REFp2b"]] = Lambdas::Preq::Bank::RequireAllBanksClosed<GDDR6>;
 
         m_preqs[m_levels["bank"]][m_commands["RDCP"]] = Lambdas::Preq::Bank::RequireRowOpen<GDDR6>;
         m_preqs[m_levels["bank"]][m_commands["WRCP"]] = Lambdas::Preq::Bank::RequireRowOpen<GDDR6>;
         m_preqs[m_levels["bank"]][m_commands["MAC"]] = Lambdas::Preq::Bank::RequireRowOpen<GDDR6>;
-        m_preqs[m_levels["bank"]][m_commands["MAC16"]] = Lambdas::Preq::Bank::RequireRowOpen<GDDR6>;
-        m_preqs[m_levels["bank"]][m_commands["AF16"]] = Lambdas::Preq::Bank::RequireRowOpen<GDDR6>;
-        m_preqs[m_levels["bank"]][m_commands["EWMUL16"]] = Lambdas::Preq::Bank::RequireRowOpen<GDDR6>;
+
+        m_preqs[m_levels["channel"]][m_commands["MAC16"]] = Lambdas::Preq::Channel::RequireAllRowsOpen<GDDR6>;
+        m_preqs[m_levels["channel"]][m_commands["AF16"]] = Lambdas::Preq::Channel::RequireAllRowsOpen<GDDR6>;
+        m_preqs[m_levels["channel"]][m_commands["EWMUL16"]] = Lambdas::Preq::Channel::RequireAllRowsOpen<GDDR6>;
     };
 
-    void set_rowhits() {
-        m_rowhits.resize(m_levels.size(), std::vector<RowhitFunc_t<Node>>(m_commands.size()));
+    // Not implemented
+    // void set_rowhits() {
+    //     m_rowhits.resize(m_levels.size(), std::vector<RowhitFunc_t<Node>>(m_commands.size()));
 
-        m_rowhits[m_levels["bank"]][m_commands["RD"]] = Lambdas::RowHit::Bank::RDWR<GDDR6>;
-        m_rowhits[m_levels["bank"]][m_commands["WR"]] = Lambdas::RowHit::Bank::RDWR<GDDR6>;
+    //     m_rowhits[m_levels["bank"]][m_commands["RD"]] = Lambdas::RowHit::Bank::RDWR<GDDR6>;
+    //     m_rowhits[m_levels["bank"]][m_commands["WR"]] = Lambdas::RowHit::Bank::RDWR<GDDR6>;
 
-        m_rowhits[m_levels["bank"]][m_commands["RDCP"]] = Lambdas::RowHit::Bank::RDWR<GDDR6>;
-        m_rowhits[m_levels["bank"]][m_commands["WRCP"]] = Lambdas::RowHit::Bank::RDWR<GDDR6>;
-        m_rowhits[m_levels["bank"]][m_commands["MAC"]] = Lambdas::RowHit::Bank::RDWR<GDDR6>;
-        m_rowhits[m_levels["bank"]][m_commands["MAC16"]] = Lambdas::RowHit::Bank::RDWR<GDDR6>;
-        m_rowhits[m_levels["bank"]][m_commands["AF16"]] = Lambdas::RowHit::Bank::RDWR<GDDR6>;
-        m_rowhits[m_levels["bank"]][m_commands["EWMUL16"]] = Lambdas::RowHit::Bank::RDWR<GDDR6>;
-    }
+    //     m_rowhits[m_levels["bank"]][m_commands["RDCP"]] = Lambdas::RowHit::Bank::RDWR<GDDR6>;
+    //     m_rowhits[m_levels["bank"]][m_commands["WRCP"]] = Lambdas::RowHit::Bank::RDWR<GDDR6>;
+    //     m_rowhits[m_levels["bank"]][m_commands["MAC"]] = Lambdas::RowHit::Bank::RDWR<GDDR6>;
 
-    void set_rowopens() {
-        m_rowopens.resize(m_levels.size(), std::vector<RowhitFunc_t<Node>>(m_commands.size()));
+    //     m_rowhits[m_levels["bank"]][m_commands["MAC16"]] = Lambdas::RowHit::Bank::RDWR<GDDR6>;
+    //     m_rowhits[m_levels["bank"]][m_commands["AF16"]] = Lambdas::RowHit::Bank::RDWR<GDDR6>;
+    //     m_rowhits[m_levels["bank"]][m_commands["EWMUL16"]] = Lambdas::RowHit::Bank::RDWR<GDDR6>;
+    // }
 
-        m_rowopens[m_levels["bank"]][m_commands["RD"]] = Lambdas::RowOpen::Bank::RDWR<GDDR6>;
-        m_rowopens[m_levels["bank"]][m_commands["WR"]] = Lambdas::RowOpen::Bank::RDWR<GDDR6>;
+    // Not implemented
+    // void set_rowopens() {
+    //     m_rowopens.resize(m_levels.size(), std::vector<RowhitFunc_t<Node>>(m_commands.size()));
 
-        m_rowopens[m_levels["bank"]][m_commands["RDCP"]] = Lambdas::RowOpen::Bank::RDWR<GDDR6>;
-        m_rowopens[m_levels["bank"]][m_commands["WRCP"]] = Lambdas::RowOpen::Bank::RDWR<GDDR6>;
-        m_rowopens[m_levels["bank"]][m_commands["MAC"]] = Lambdas::RowOpen::Bank::RDWR<GDDR6>;
-        m_rowopens[m_levels["bank"]][m_commands["MAC16"]] = Lambdas::RowOpen::Bank::RDWR<GDDR6>;
-        m_rowopens[m_levels["bank"]][m_commands["AF16"]] = Lambdas::RowOpen::Bank::RDWR<GDDR6>;
-        m_rowopens[m_levels["bank"]][m_commands["EWMUL16"]] = Lambdas::RowOpen::Bank::RDWR<GDDR6>;
-    }
+    //     m_rowopens[m_levels["bank"]][m_commands["RD"]] = Lambdas::RowOpen::Bank::RDWR<GDDR6>;
+    //     m_rowopens[m_levels["bank"]][m_commands["WR"]] = Lambdas::RowOpen::Bank::RDWR<GDDR6>;
+
+    //     m_rowopens[m_levels["bank"]][m_commands["RDCP"]] = Lambdas::RowOpen::Bank::RDWR<GDDR6>;
+    //     m_rowopens[m_levels["bank"]][m_commands["WRCP"]] = Lambdas::RowOpen::Bank::RDWR<GDDR6>;
+    //     m_rowopens[m_levels["bank"]][m_commands["MAC"]] = Lambdas::RowOpen::Bank::RDWR<GDDR6>;
+    //     m_rowopens[m_levels["bank"]][m_commands["MAC16"]] = Lambdas::RowOpen::Bank::RDWR<GDDR6>;
+    //     m_rowopens[m_levels["bank"]][m_commands["AF16"]] = Lambdas::RowOpen::Bank::RDWR<GDDR6>;
+    //     m_rowopens[m_levels["bank"]][m_commands["EWMUL16"]] = Lambdas::RowOpen::Bank::RDWR<GDDR6>;
+    // }
 
     void create_nodes() {
         int num_channels = m_organization.count[m_levels["channel"]];

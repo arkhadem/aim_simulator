@@ -268,6 +268,7 @@ private:
             if (!request_found) {
                 if (m_aim_buffer.size() != 0) {
                     req_it = m_aim_buffer.begin();
+                    req_it->command = m_dram->get_preq_command(req_it->final_command, req_it->addr_vec);
                     request_found = m_dram->check_ready(req_it->command, req_it->addr_vec);
                     req_buffer = &m_aim_buffer;
                 } else {

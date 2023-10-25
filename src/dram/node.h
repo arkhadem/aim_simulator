@@ -1,6 +1,7 @@
 #ifndef RAMULATOR_DRAM_NODE_H
 #define RAMULATOR_DRAM_NODE_H
 
+#include <cassert>
 #include <concepts>
 #include <deque>
 #include <functional>
@@ -90,7 +91,7 @@ struct DRAMNodeBase {
         int child_id = addr_vec[m_level + 1];
         if (m_spec->m_actions[m_level][command]) {
             // update the state machine at this level
-            m_spec->m_actions[m_level][command](static_cast<NodeType *>(this), command, child_id, clk);
+            m_spec->m_actions[m_level][command](static_cast<NodeType *>(this), command, addr_vec, clk);
         }
         if (m_level == m_spec->m_command_scopes[command] || !m_child_nodes.size()) {
             // stop recursion: updated all levels
@@ -192,6 +193,7 @@ struct DRAMNodeBase {
     };
 
     bool check_rowbuffer_hit(int command, const AddrVec_t &addr_vec, Clk_t m_clk) {
+        assert(false); // Not implemented
         // TODO: Optimize this by just checking the bank-levels? Have a dedicated bank structure?
         int child_id = addr_vec[m_level + 1];
         if (m_spec->m_rowhits[m_level][command]) {
@@ -210,9 +212,9 @@ struct DRAMNodeBase {
 };
 
 template <class T>
-using ActionFunc_t = std::function<void(typename T::Node *node, int cmd, int target_id, Clk_t clk)>;
+using ActionFunc_t = std::function<void(typename T::Node *node, int cmd, const AddrVec_t &addr_vec, Clk_t clk)>;
 template <class T>
-using PreqFunc_t = std::function<int(typename T::Node *node, int cmd, int target_id, Clk_t clk)>;
+using PreqFunc_t = std::function<int(typename T::Node *node, int cmd, const AddrVec_t &addr_vec, Clk_t clk)>;
 template <class T>
 using RowhitFunc_t = std::function<bool(typename T::Node *node, int cmd, int target_id, Clk_t clk)>;
 template <class T>
