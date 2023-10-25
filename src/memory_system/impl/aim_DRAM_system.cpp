@@ -59,6 +59,20 @@ protected:
         return 0;
     }
 
+    void apply_addr_mapp(Request &req, int channel_id) {
+        req.addr_vec.resize(5, -1);
+        req.addr_vec[0] = channel_id;
+        if (req.bank_index == -1) {
+            req.addr_vec[1] = -1;
+            req.addr_vec[2] = -1;
+        } else {
+            req.addr_vec[1] = req.bank_index / 4;
+            req.addr_vec[2] = req.bank_index % 4;
+        }
+        req.addr_vec[3] = req.row_addr;
+        req.addr_vec[4] = req.col_addr;
+    }
+
 public:
     std::map<Request::Type, std::map<Request::MemAccessRegion, int>> s_num_RW_requests;
     std::map<Request::Opcode, int> s_num_AiM_requests;
@@ -253,6 +267,7 @@ public:
                                 channel_mask &= (~channel_id);
 
                                 aim_req.AiM_req_id = AiM_req_id++;
+                                apply_addr_mapp(aim_req, channel_id);
                                 if (m_controllers[channel_id]->send(aim_req) == false) {
                                     remaining_AiM_requests[channel_id].push(aim_req);
                                     all_AiM_requests_sent = false;

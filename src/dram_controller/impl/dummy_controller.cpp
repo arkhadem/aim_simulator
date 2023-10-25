@@ -3,31 +3,30 @@
 namespace Ramulator {
 
 class DummyController final : public IDRAMController, public Implementation {
-  RAMULATOR_REGISTER_IMPLEMENTATION(IDRAMController, DummyController, "DummyController", "A dummy memory controller.");
+    RAMULATOR_REGISTER_IMPLEMENTATION(IDRAMController, DummyController, "DummyController", "A dummy memory controller.");
 
-  public:
+public:
     void init() override {
-      return;
+        return;
     };
 
-    bool send(Request& req) override {
-      if (req.callback) {
-        req.callback(req);
-      }
-      return true; 
+    bool send(Request &req) override {
+        if (req.callback) {
+            req.callback(req);
+        }
+        return true;
     };
 
-    bool priority_send(Request& req) override {
-      if (req.callback) {
-        req.callback(req);
-      }
-      return true; 
+    bool priority_send(Request &req) override {
+        if (req.callback) {
+            req.callback(req);
+        }
+        return true;
     };
 
     void tick() override {
-      return;
+        return;
     }
-
 };
 
-}   // namespace Ramulator
+} // namespace Ramulator

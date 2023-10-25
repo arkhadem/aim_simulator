@@ -1,66 +1,65 @@
 #ifndef RAMULATOR_DRAM_DRAM_H
 #define RAMULATOR_DRAM_DRAM_H
 
+#include <functional>
+#include <map>
 #include <string>
 #include <vector>
-#include <map>
-#include <functional>
 
 #include "base/base.h"
-#include "dram/spec.h"
 #include "dram/node.h"
+#include "dram/spec.h"
 
 namespace Ramulator {
 
 class IDRAM : public Clocked<IDRAM> {
-  RAMULATOR_REGISTER_INTERFACE(IDRAM, "DRAM", "DRAM Deivce Model Interface")
+    RAMULATOR_REGISTER_INTERFACE(IDRAM, "DRAM", "DRAM Deivce Model Interface")
 
-  /************************************************
+    /************************************************
    *                Organization
-   ***********************************************/   
-  public:
-    int m_internal_prefetch_size = -1;  // Internal prefetch (xn) size: How many columns are fetched into the I/O? e.g., DDR4 has 8n prefetch.
-    SpecDef m_levels;                   // Definition (i.e., names and ids) of the levels in the hierarchy
-    Organization m_organization;        // The organization of the device (density, dq, levels)
-    int m_channel_width = -1;           // Channel width (should be set by the implementation's config)
+   ***********************************************/
+public:
+    int m_internal_prefetch_size = -1; // Internal prefetch (xn) size: How many columns are fetched into the I/O? e.g., DDR4 has 8n prefetch.
+    SpecDef m_levels;                  // Definition (i.e., names and ids) of the levels in the hierarchy
+    Organization m_organization;       // The organization of the device (density, dq, levels)
+    int m_channel_width = -1;          // Channel width (should be set by the implementation's config)
 
-
-  /************************************************
+    /************************************************
    *             Requests & Commands
    ***********************************************/
-  public:
-    SpecDef m_commands;                                   // The definition of all DRAM commands
-    SpecLUT<Level_t> m_command_scopes{m_commands};        // A LUT of the scopes (i.e., at which organization level) of the DRAM commands
-    SpecLUT<DRAMCommandMeta> m_command_meta{m_commands};  // A LUT to check which DRAM command opens a row 
+public:
+    SpecDef m_commands;                                  // The definition of all DRAM commands
+    SpecLUT<Level_t> m_command_scopes{m_commands};       // A LUT of the scopes (i.e., at which organization level) of the DRAM commands
+    SpecLUT<DRAMCommandMeta> m_command_meta{m_commands}; // A LUT to check which DRAM command opens a row
 
-    SpecDef m_requests;                                     // The definition of all requests supported
-    SpecLUT<Command_t> m_request_translations{m_requests};  // A LUT of the final DRAM commands needed by every request
+    SpecDef m_requests;                                    // The definition of all requests supported
+    SpecLUT<Command_t> m_request_translations{m_requests}; // A LUT of the final DRAM commands needed by every request
 
+    SpecDef m_aim_requests;                                    // The definition of all AiM requests supported
+    SpecLUT<Command_t> m_aim_request_translations{m_requests}; // A LUT of the final DRAM commands needed by every AiM request
 
-  /************************************************
+    /************************************************
    *                Node States
    ***********************************************/
-  public:
+public:
     SpecDef m_states;
     SpecLUT<State_t> m_init_states{m_states};
 
-
-  /************************************************
+    /************************************************
    *                   Timing
    ***********************************************/
-  public:
-    SpecDef m_timings;                      // The names of the timing constraints
-    SpecLUT<int> m_timing_vals{m_timings};  // The LUT of the values for each timing constraints
+public:
+    SpecDef m_timings;                     // The names of the timing constraints
+    SpecLUT<int> m_timing_vals{m_timings}; // The LUT of the values for each timing constraints
 
-    TimingCons m_timing_cons;           // The actual timing constraints used by Ramulator's DRAM model
+    TimingCons m_timing_cons; // The actual timing constraints used by Ramulator's DRAM model
 
-    Clk_t m_read_latency = -1;          // Number of cycles needed between issuing RD command and receiving data.
+    Clk_t m_read_latency = -1; // Number of cycles needed between issuing RD command and receiving data.
 
-
-  /************************************************
+    /************************************************
    *          Device Behavior Interface
-   ***********************************************/   
-  public:
+   ***********************************************/
+public:
     /**
      * @brief   Issues a command with its address to the device.
      * @details
@@ -68,7 +67,7 @@ class IDRAM : public Clocked<IDRAM> {
      * the states of involved nodes in the device hierarchy and their timing information.
      * 
      */
-    virtual void issue_command(int command, const AddrVec_t& addr_vec) = 0;
+    virtual void issue_command(int command, const AddrVec_t &addr_vec) = 0;
 
     /**
      * @brief    Returns the prequisite command of the given command and address
@@ -77,7 +76,7 @@ class IDRAM : public Clocked<IDRAM> {
      * command based on the current state of the device.
      * 
      */
-    virtual int get_preq_command(int command, const AddrVec_t& addr_vec) = 0;
+    virtual int get_preq_command(int command, const AddrVec_t &addr_vec) = 0;
 
     /**
      * @brief     Checks whether the device is ready to accept the given command.
@@ -86,7 +85,7 @@ class IDRAM : public Clocked<IDRAM> {
      * whether the current state of the device allows execution of the command.
      * 
      */
-    virtual bool check_ready(int command, const AddrVec_t& addr_vec) = 0;
+    virtual bool check_ready(int command, const AddrVec_t &addr_vec) = 0;
 
     /**
      * @brief     Checks whether the command will result in a rowbuffer hit
@@ -95,7 +94,7 @@ class IDRAM : public Clocked<IDRAM> {
      * hit in an opened rowbuffer.
      * 
      */
-    virtual bool check_rowbuffer_hit(int command, const AddrVec_t& addr_vec) = 0;
+    virtual bool check_rowbuffer_hit(int command, const AddrVec_t &addr_vec) = 0;
 
     /**
      * @brief     An universal interface for the host to change DRAM configurations on the fly
@@ -105,37 +104,35 @@ class IDRAM : public Clocked<IDRAM> {
      * TODO: Alternatively, we can keep adding new functionalities to this DRAM interface...
      * 
      */
-    virtual void notify(std::string_view key, uint64_t value) {};
+    virtual void notify(std::string_view key, uint64_t value){};
 
-
-  /************************************************
+    /************************************************
    *        Interface to Query Device Spec
-   ***********************************************/   
-  public:
+   ***********************************************/
+public:
     int get_level_size(std::string name) {
-      try {
-        int level_idx = m_levels(name);
-        return m_organization.count[level_idx];
-      } catch (const std::out_of_range& e) {
-        return -1;
-      }
+        try {
+            int level_idx = m_levels(name);
+            return m_organization.count[level_idx];
+        } catch (const std::out_of_range &e) {
+            return -1;
+        }
     }
 };
 
-#define RAMULATOR_DECLARE_SPECS() \
-  IDRAM::m_internal_prefetch_size = m_internal_prefetch_size; \
-  IDRAM::m_levels = m_levels; \
-  IDRAM::m_commands = m_commands; \
-  IDRAM::m_command_scopes = m_command_scopes; \
-  IDRAM::m_command_meta = m_command_meta; \
-  IDRAM::m_command_meta = m_command_meta; \
-  IDRAM::m_requests = m_requests; \
-  IDRAM::m_request_translations = m_request_translations; \
-  IDRAM::m_states = m_states; \
-  IDRAM::m_init_states = m_init_states; \
-  IDRAM::m_timings = m_timings; \
+#define RAMULATOR_DECLARE_SPECS()                               \
+    IDRAM::m_internal_prefetch_size = m_internal_prefetch_size; \
+    IDRAM::m_levels = m_levels;                                 \
+    IDRAM::m_commands = m_commands;                             \
+    IDRAM::m_command_scopes = m_command_scopes;                 \
+    IDRAM::m_command_meta = m_command_meta;                     \
+    IDRAM::m_command_meta = m_command_meta;                     \
+    IDRAM::m_requests = m_requests;                             \
+    IDRAM::m_request_translations = m_request_translations;     \
+    IDRAM::m_states = m_states;                                 \
+    IDRAM::m_init_states = m_init_states;                       \
+    IDRAM::m_timings = m_timings;
 
-}        // namespace Ramulator
+} // namespace Ramulator
 
-#endif   // RAMULATOR_DRAM_DRAM_H
-
+#endif // RAMULATOR_DRAM_DRAM_H

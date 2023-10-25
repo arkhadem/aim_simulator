@@ -1,5 +1,7 @@
+#include "base/request.h"
 #include "dram_controller/controller.h"
 #include "memory_system/memory_system.h"
+#include <string>
 
 namespace Ramulator {
 
@@ -13,6 +15,7 @@ private:
     ReqBuffer m_priority_buffer; // Buffer for high-priority requests (e.g., maintenance like refresh).
     ReqBuffer m_read_buffer;     // Read request buffer
     ReqBuffer m_write_buffer;    // Write request buffer
+    ReqBuffer m_aim_buffer;      // AiM request buffer
 
     int m_row_addr_idx = -1;
 
@@ -48,8 +51,58 @@ public:
         m_priority_buffer.max_size = 512 * 3 + 32;
     };
 
+    bool compare_addr_vec(Request req1, Request req2, int min_compared_level) {
+        for (int level_idx = m_dram->m_levels("channel"); level_idx <= min_compared_level; level_idx++) {
+            if (req1.addr_vec[level_idx] == -1)
+                return true;
+            if (req2.addr_vec[level_idx] == -1)
+                return true;
+            if (req1.addr_vec[level_idx] != req2.addr_vec[level_idx])
+                return false;
+        }
+        return true;
+    }
+
     bool send(Request &req) override {
-        req.final_command = m_dram->m_request_translations((int)req.type);
+        if (req.type == Request::Type::AIM) {
+            if ((m_write_buffer.size() != 0) || (m_read_buffer.size() != 0))
+                return false;
+            req.final_command = m_dram->m_aim_request_translations((int)req.opcode);
+        } else {
+            if (m_aim_buffer.size() != 0)
+                return false;
+            req.final_command = m_dram->m_request_translations((int)req.type);
+        }
+
+        // // Forward existing write requests to incoming read requests
+        // if (req.type == Request::Type::Read) {
+        //     auto my_addr_comparator = [req](const Request &wreq) {
+        //         return wreq.addr == req.addr;
+        //     };
+        //     auto my_addr_vec_comparator = [req, this](const Request &aim_req) {
+        //         // The AiM request changes the bank data
+        //         if (AiMISRInfo::convert_AiM_opcode_to_AiM_ISR(aim_req.opcode).target_level != "column")
+        //             return false;
+        //         return compare_addr_vec(aim_req, req, m_dram->m_levels("column"));
+        //     };
+
+        //     // Find the youngest write alias
+        //     ReqBuffer::iterator write_alis_it = std::find_if(m_write_buffer.begin(), m_write_buffer.end(), my_addr_comparator);
+        //     if (write_alis_it != m_write_buffer.end()) {
+
+        //         // Find the youngest AiM collision
+        //         ReqBuffer::iterator aim_alis_it = std::find_if(m_aim_buffer.begin(), m_aim_buffer.end(), my_addr_vec_comparator);
+
+        //         // Write to Read forwarding only if [there is no AiM alias] or [write alias is younger than aim alias]
+        //         if ((aim_alis_it != m_aim_buffer.end()) || (write_alis_it->AiM_req_id > aim_alis_it->AiM_req_id)) {
+
+        //             // The request will depart at the next cycle
+        //             req.depart = m_clk + 1;
+        //             pending.push_back(req);
+        //             return true;
+        //         }
+        //     }
+        // }
 
         // Forward existing write requests to incoming read requests
         if (req.type == Request::Type::Read) {
@@ -71,6 +124,8 @@ public:
             is_success = m_read_buffer.enqueue(req);
         } else if (req.type == Request::Type::Write) {
             is_success = m_write_buffer.enqueue(req);
+        } else if (req.type == Request::Type::AIM) {
+            is_success = m_aim_buffer.enqueue(req);
         } else {
             throw std::runtime_error("Invalid request type!");
         }
@@ -84,7 +139,10 @@ public:
     };
 
     bool priority_send(Request &req) override {
-        req.final_command = m_dram->m_request_translations((int)req.type);
+        if (req.type == Request::Type::AIM)
+            req.final_command = m_dram->m_aim_request_translations((int)req.opcode);
+        else
+            req.final_command = m_dram->m_request_translations((int)req.type);
 
         bool is_success = false;
         is_success = m_priority_buffer.enqueue(req);
@@ -116,14 +174,15 @@ public:
 
             // If we are issuing the last command, set depart clock cycle and move the request to the pending queue
             if (req_it->command == req_it->final_command) {
-                if (req_it->type == Request::Type::Read) {
+                if (req_it->is_reader()) {
                     req_it->depart = m_clk + m_dram->m_read_latency;
                     pending.push_back(*req_it);
-                } else if (req_it->type == Request::Type::Write) {
-                    // TODO: Add code to update statistics
                 }
+                // else if (req_it->type == Request::Type::Write) {
+                //     // TODO: Add code to update statistics
+                // }
                 buffer->remove(req_it);
-            } else {
+            } else if (req_it->type != Request::Type::AIM) {
                 if (m_dram->m_command_meta(req_it->command).is_opening) {
                     m_active_buffer.enqueue(*req_it);
                     buffer->remove(req_it);
@@ -205,14 +264,20 @@ private:
                 }
             }
 
-            // 2.2.1    If no request to be scheduled in the priority buffer, check the read and write buffers.
+            // 2.2.1    If no request to be scheduled in the priority buffer, check the read and write OR AiM buffers.
             if (!request_found) {
-                // Query the write policy to decide which buffer to serve
-                set_write_mode();
-                auto &buffer = m_is_write_mode ? m_write_buffer : m_read_buffer;
-                if (req_it = m_scheduler->get_best_request(buffer); req_it != buffer.end()) {
+                if (m_aim_buffer.size() != 0) {
+                    req_it = m_aim_buffer.begin();
                     request_found = m_dram->check_ready(req_it->command, req_it->addr_vec);
-                    req_buffer = &buffer;
+                    req_buffer = &m_aim_buffer;
+                } else {
+                    // Query the write policy to decide which buffer to serve
+                    set_write_mode();
+                    auto &buffer = m_is_write_mode ? m_write_buffer : m_read_buffer;
+                    if (req_it = m_scheduler->get_best_request(buffer); req_it != buffer.end()) {
+                        request_found = m_dram->check_ready(req_it->command, req_it->addr_vec);
+                        req_buffer = &buffer;
+                    }
                 }
             }
         }

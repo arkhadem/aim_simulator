@@ -37,29 +37,26 @@ struct Request {
 
     // ISR Command Opcodes
     enum class Opcode {
-        MIN,
-        ISR_WR_SBK, // Write [op_size * 256 bits] from [GPR * 32] to [a single bank] of channel [#channel_address]
-
-        ISR_WR_GB, // Write the same [op_size * 256 bits] starting from [GPR * 32]
-                   // to the [Global Buffer] of [channel_mask] channels
-                   // [NOT_IMPLEMENTED] source could also be [host]
-
-        ISR_WR_BIAS, // Write [opsize * 16 x 16-bits] bits from [GPR * 32]
-                     // to [MAC accumulator of 16 banks] of [opsize or channel_mask] channels
-
-        ISR_WR_AFLUT,  // Write activation function data from [host] to [?]
-        ISR_RD_MAC,    // Read data from [MAC accumulator of all banks] to [GPR]
-        ISR_RD_AF,     // Read data from [AF results of all banks] to [GPR]
-        ISR_RD_SBK,    // [NOT_LISTED] Read data from [a single bank] to [host]
-        ISR_COPY_BKGB, // Copy data from [a single bank] to [the Global Buffer]
-        ISR_COPY_GBBK, // Copy data from [the Global Buffer] to [a single bank]
-        ISR_MAC_SBK,   // Perform MAC operation between [a single bank] and [Global Buffer]
-        ISR_MAC_ABK,   // Perform MAC operation between [all banks] and [Global Buffer]
-        ISR_AF,        // Perform Activation Function operation on [all banks]
-        ISR_EWMUL,     // Element wise multiplication between 2 banks of 1 or all bank group(s)
-        ISR_EWADD,     // Element wise multiplication between 2 GPR addresses
-        ISR_EOC,       // End of compute for the current kernel
-        MAX
+        MIN = 0,
+        ISR_WR_SBK = 1,    // Write [op_size * 256 bits] from [GPR * 32] to [a single bank] of channel [#channel_address]
+        ISR_WR_GB = 2,     // Write the same [op_size * 256 bits] starting from [GPR * 32]
+                           // to the [Global Buffer] of [channel_mask] channels
+                           // [NOT_IMPLEMENTED] source could also be [host]
+        ISR_WR_BIAS = 3,   // Write [opsize * 16 x 16-bits] bits from [GPR * 32]
+                           // to [MAC accumulator of 16 banks] of [opsize or channel_mask] channels
+        ISR_WR_AFLUT = 4,  // Write activation function data from [host] to [?]
+        ISR_RD_MAC = 5,    // Read data from [MAC accumulator of all banks] to [GPR]
+        ISR_RD_AF = 6,     // Read data from [AF results of all banks] to [GPR]
+        ISR_RD_SBK = 7,    // [NOT_LISTED] Read data from [a single bank] to [host]
+        ISR_COPY_BKGB = 8, // Copy data from [a single bank] to [the Global Buffer]
+        ISR_COPY_GBBK = 9, // Copy data from [the Global Buffer] to [a single bank]
+        ISR_MAC_SBK = 10,  // Perform MAC operation between [a single bank] and [Global Buffer]
+        ISR_MAC_ABK = 11,  // Perform MAC operation between [all banks] and [Global Buffer]
+        ISR_AF = 12,       // Perform Activation Function operation on [all banks]
+        ISR_EWMUL = 13,    // Element wise multiplication between 2 banks of 1 or all bank group(s)
+        ISR_EWADD = 14,    // Element wise multiplication between 2 GPR addresses
+        ISR_EOC = 15,      // End of compute for the current kernel
+        MAX = 16
         // ISR_WR_HBK,    // [NOT_IMPLEMENTED] Write data from [GPR] to [8 banks]
         // ISR_WR_ABK,    // [NOT_IMPLEMENTED] Write data from [GPR] to [all banks]
         // ISR_WR_GPR,    // [NOT_IMPLEMENTED] Write data from [host] to [GPR]
@@ -76,7 +73,7 @@ struct Request {
     //     };
     // };
 
-    uint16_t opsize = -1;
+    int32_t opsize = -1;
 
     // [NOT_IMPLEMENTED] Source of ISR_WR_GB is host (false) or GPR (true)
     // bool use_GPR = false;
@@ -90,32 +87,32 @@ struct Request {
     // whose bit is set in channel mask.
     // NOT USED in ISR_EWADD.
     // Channel mask must show 1 channel in ISR_WR_SBK and ISR_RD_SBK ISRs
-    uint16_t channel_mask = -1;
+    int16_t channel_mask = -1;
 
     // This request will be sent to a specific bank. USED only in single-bank ISRs, i.e.,
     // ISR_WR_SBK, ISR_RD_SBK, ISR_COPY_BKGB, ISR_COPY_GBBK, ISR_MAC_SBK, and ISR_EWMUL
-    uint16_t bank_index = -1;
+    int16_t bank_index = -1;
 
     // Bank row and column address, NOT USED for the operations without DRAM bank source/dst:
     // ISR_WR_BIAS, ISR_WR_AFLUT, ISR_RD_MAC, ISR_RD_AF, ISR_AF, and ISR_EWADD
     // In addition, row_addr is NOT USED for ISR_WR_GB
-    uint32_t row_addr = -1;
-    uint32_t col_addr = -1;
+    int32_t row_addr = -1;
+    int32_t col_addr = -1;
 
     // Thread (register) index (0 or 1) for MAC and AF results
-    uint8_t thread_index = -1;
+    int8_t thread_index = -1;
 
     // Broadcast only USED for ISR_MAC_SBK and ISR_MAC_ABK
     // vector data for MAC is from GB (0) or next bank (1)
-    uint16_t broadcast = -1;
+    int16_t broadcast = -1;
 
     // AFM only USED for ISR_AF
     // Activation Function mode selects AF (0-7)
-    uint16_t afm = -1;
+    int16_t afm = -1;
 
     // ewmul bank group only USED for ISR_MAC_ABK
     // EWMUL in one bank group (0) or all bank groups (1)
-    uint16_t ewmul_bg = -1;
+    int16_t ewmul_bg = -1;
 
     int source_id = -1; // An identifier for where the request is coming from (e.g., which core)
 
@@ -130,6 +127,8 @@ struct Request {
     Request(Addr_t addr, Type type);
     Request(AddrVec_t addr_vec, Type type);
     Request(Addr_t addr, Type type, int source_id, std::function<void(Request &)> callback);
+
+    bool is_reader();
 };
 
 class AiMISR {
@@ -150,12 +149,14 @@ public:
            std::vector<Field> legal_fields_,
            int channel_count_eq_opsize_,
            int channel_count_eq_one_,
-           int AiM_DMA_blocking_)
+           int AiM_DMA_blocking_,
+           std::string target_level_)
         : opcode(opcode_),
           legal_fields(legal_fields_),
           channel_count_eq_opsize(channel_count_eq_opsize_),
           channel_count_eq_one(channel_count_eq_one_),
-          AiM_DMA_blocking(AiM_DMA_blocking_) {}
+          AiM_DMA_blocking(AiM_DMA_blocking_),
+          target_level(target_level_) {}
 
     Request::Opcode opcode;
 
@@ -164,6 +165,8 @@ public:
     bool channel_count_eq_opsize;
     bool channel_count_eq_one;
     bool AiM_DMA_blocking;
+
+    std::string target_level;
 
     bool is_field_legal(Field field) {
         if (std::count(legal_fields.begin(), legal_fields.end(), field))
@@ -206,9 +209,10 @@ public:
                                                       AiMISR::Field::bank_index,
                                                       AiMISR::Field::row_addr,
                                                       AiMISR::Field::col_addr},
-                                                     false, // channel_count_eq_opsize
-                                                     true,  // channel_count_eq_one
-                                                     false  // AiM_DMA_blocking
+                                                     false,   // channel_count_eq_opsize
+                                                     true,    // channel_count_eq_one
+                                                     false,   // AiM_DMA_blocking
+                                                     "column" // target_level
         );
 
         aim_opcode_to_str[Request::Opcode::ISR_WR_GB] = "ISR_WR_GB";
@@ -217,9 +221,10 @@ public:
                                                      AiMISR::Field::GPR_addr_0,
                                                      AiMISR::Field::channel_mask,
                                                      AiMISR::Field::col_addr},
-                                                    false, // channel_count_eq_opsize
-                                                    false, // channel_count_eq_one
-                                                    false  // AiM_DMA_blocking
+                                                    false,    // channel_count_eq_opsize
+                                                    false,    // channel_count_eq_one
+                                                    false,    // AiM_DMA_blocking
+                                                    "channel" // target_level
         );
 
         aim_opcode_to_str[Request::Opcode::ISR_WR_BIAS] = "ISR_WR_BIAS";
@@ -230,15 +235,17 @@ public:
                                                        AiMISR::Field::thread_index},
                                                       true,  // channel_count_eq_opsize
                                                       false, // channel_count_eq_one
-                                                      false  // AiM_DMA_blocking
+                                                      false, // AiM_DMA_blocking
+                                                      "bank" // target_level
         );
 
         aim_opcode_to_str[Request::Opcode::ISR_WR_AFLUT] = "ISR_WR_AFLUT";
         opcode_str_to_aim_ISR["ISR_WR_AFLUT"] = AiMISR(Request::Opcode::ISR_WR_AFLUT,
                                                        {AiMISR::Field::opsize},
-                                                       false, // channel_count_eq_opsize
-                                                       false, // channel_count_eq_one
-                                                       false  // AiM_DMA_blocking
+                                                       false,   // channel_count_eq_opsize
+                                                       false,   // channel_count_eq_one
+                                                       false,   // AiM_DMA_blocking
+                                                       "column" // target_level
         );
 
         aim_opcode_to_str[Request::Opcode::ISR_RD_MAC] = "ISR_RD_MAC";
@@ -249,7 +256,8 @@ public:
                                                       AiMISR::Field::thread_index},
                                                      true,  // channel_count_eq_opsize
                                                      false, // channel_count_eq_one
-                                                     true   // AiM_DMA_blocking
+                                                     true,  // AiM_DMA_blocking
+                                                     "bank" // target_level
         );
 
         aim_opcode_to_str[Request::Opcode::ISR_RD_AF] = "ISR_RD_AF";
@@ -259,7 +267,8 @@ public:
                                                      AiMISR::Field::channel_mask},
                                                     true,  // channel_count_eq_opsize
                                                     false, // channel_count_eq_one
-                                                    true   // AiM_DMA_blocking
+                                                    true,  // AiM_DMA_blocking
+                                                    "bank" // target_level
         );
 
         aim_opcode_to_str[Request::Opcode::ISR_RD_SBK] = "ISR_RD_SBK";
@@ -269,9 +278,10 @@ public:
                                                       AiMISR::Field::bank_index,
                                                       AiMISR::Field::row_addr,
                                                       AiMISR::Field::col_addr},
-                                                     false, // channel_count_eq_opsize
-                                                     true,  // channel_count_eq_one
-                                                     true   // AiM_DMA_blocking
+                                                     false,   // channel_count_eq_opsize
+                                                     true,    // channel_count_eq_one
+                                                     true,    // AiM_DMA_blocking
+                                                     "column" // target_level
         );
 
         aim_opcode_to_str[Request::Opcode::ISR_COPY_BKGB] = "ISR_COPY_BKGB";
@@ -281,9 +291,10 @@ public:
                                                          AiMISR::Field::bank_index,
                                                          AiMISR::Field::row_addr,
                                                          AiMISR::Field::col_addr},
-                                                        false, // channel_count_eq_opsize
-                                                        false, // channel_count_eq_one
-                                                        false  // AiM_DMA_blocking
+                                                        false,   // channel_count_eq_opsize
+                                                        false,   // channel_count_eq_one
+                                                        false,   // AiM_DMA_blocking
+                                                        "column" // target_level
         );
 
         aim_opcode_to_str[Request::Opcode::ISR_COPY_GBBK] = "ISR_COPY_GBBK";
@@ -293,9 +304,10 @@ public:
                                                          AiMISR::Field::bank_index,
                                                          AiMISR::Field::row_addr,
                                                          AiMISR::Field::col_addr},
-                                                        false, // channel_count_eq_opsize
-                                                        false, // channel_count_eq_one
-                                                        false  // AiM_DMA_blocking
+                                                        false,   // channel_count_eq_opsize
+                                                        false,   // channel_count_eq_one
+                                                        false,   // AiM_DMA_blocking
+                                                        "column" // target_level
         );
 
         aim_opcode_to_str[Request::Opcode::ISR_MAC_SBK] = "ISR_MAC_SBK";
@@ -308,7 +320,8 @@ public:
                                                        AiMISR::Field::thread_index},
                                                       false, // channel_count_eq_opsize
                                                       false, // channel_count_eq_one
-                                                      false  // AiM_DMA_blocking
+                                                      false, // AiM_DMA_blocking
+                                                      "bank" // target_level
         );
 
         aim_opcode_to_str[Request::Opcode::ISR_MAC_ABK] = "ISR_MAC_ABK";
@@ -320,7 +333,8 @@ public:
                                                        AiMISR::Field::thread_index},
                                                       false, // channel_count_eq_opsize
                                                       false, // channel_count_eq_one
-                                                      false  // AiM_DMA_blocking
+                                                      false, // AiM_DMA_blocking
+                                                      "bank" // target_level
         );
 
         aim_opcode_to_str[Request::Opcode::ISR_AF] = "ISR_AF";
@@ -330,7 +344,8 @@ public:
                                                   AiMISR::Field::thread_index},
                                                  true,  // channel_count_eq_opsize
                                                  false, // channel_count_eq_one
-                                                 false  // AiM_DMA_blocking
+                                                 false, // AiM_DMA_blocking
+                                                 "bank" // target_level
         );
 
         aim_opcode_to_str[Request::Opcode::ISR_EWMUL] = "ISR_EWMUL";
@@ -340,9 +355,10 @@ public:
                                                      AiMISR::Field::bank_index,
                                                      AiMISR::Field::row_addr,
                                                      AiMISR::Field::col_addr},
-                                                    false, // channel_count_eq_opsize
-                                                    false, // channel_count_eq_one
-                                                    false  // AiM_DMA_blocking
+                                                    false,   // channel_count_eq_opsize
+                                                    false,   // channel_count_eq_one
+                                                    false,   // AiM_DMA_blocking
+                                                    "column" // target_level
         );
 
         aim_opcode_to_str[Request::Opcode::ISR_EWADD] = "ISR_EWADD";
@@ -352,7 +368,8 @@ public:
                                                      AiMISR::Field::GPR_addr_1},
                                                     false, // channel_count_eq_opsize
                                                     false, // channel_count_eq_one
-                                                    false  // AiM_DMA_blocking
+                                                    false, // AiM_DMA_blocking
+                                                    "DMA"  // target_level
         );
 
         aim_opcode_to_str[Request::Opcode::ISR_EOC] = "ISR_EOC";
@@ -360,7 +377,8 @@ public:
                                                   {},
                                                   false, // channel_count_eq_opsize
                                                   false, // channel_count_eq_one
-                                                  false  // AiM_DMA_blocking
+                                                  false, // AiM_DMA_blocking
+                                                  "DMA"  // target_level
         );
 
         str_to_type["R"] = Request::Type::Read;
