@@ -1,8 +1,8 @@
 #ifndef RAMULATOR_BASE_REQUEST_H
 #define RAMULATOR_BASE_REQUEST_H
 
-#include <cstdint>
 #include <list>
+#include <stdint.h>
 #include <string>
 #include <vector>
 
@@ -145,12 +145,12 @@ public:
         thread_index
     };
 
-    AiMISR(Request::Opcode opcode_,
-           std::vector<Field> legal_fields_,
-           int channel_count_eq_opsize_,
-           int channel_count_eq_one_,
-           int AiM_DMA_blocking_,
-           std::string target_level_)
+    AiMISR(Request::Opcode opcode_ = Request::Opcode::MAX,
+           std::vector<Field> legal_fields_ = {},
+           bool channel_count_eq_opsize_ = false,
+           bool channel_count_eq_one_ = false,
+           bool AiM_DMA_blocking_ = false,
+           std::string target_level_ = "")
         : opcode(opcode_),
           legal_fields(legal_fields_),
           channel_count_eq_opsize(channel_count_eq_opsize_),
