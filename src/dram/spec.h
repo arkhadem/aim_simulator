@@ -2,7 +2,10 @@
 #define RAMULATOR_DEVICE_SPEC_H
 
 #include <array>
+#include <cstdio>
+#include <iostream>
 #include <map>
+#include <ostream>
 #include <ranges>
 #include <stdexcept>
 #include <string>
@@ -167,6 +170,7 @@ public:
                 return i;
             }
         }
+        std::cout << "Name " << name << " not exists!" << std::endl;
         throw "NON EXISTENT NAME";
     };
 };

@@ -26,7 +26,7 @@
 ,AiM,ISR_WR_GB,2,2,-1,15,-1,-1,0,-1
 ,,,,,,,,,,
 #,Write [4-data = 1024 bits] from GPR[4-7] to channels [0-3] * 16 MAC accumulators,,,,,,,,,
-,AiM,ISR_WR_BIAS,4,4,-1,15,-1,-1,-1,-1
+,AiM,ISR_WR_BIAS,4,4,-1,15,-1,-1,-1,0
 ,,,,,,,,,,
 #,set CFR[mr13.broadcast at address 0x0010] to 1 (MAC from global buffer),,,,,,,,,
 ,W,CFR,0x0010,1,,,,,,
@@ -38,7 +38,7 @@
 ,W,CFR,0x0010,0,,,,,,
 ,,,,,,,,,,
 #,"MAC operation between 2 columns of half of the banks in channels [0-3] with 2 columns of the next banks, write to thread 0",,,,,,,,,
-,AiM,ISR_MAC_ABK,2,-1,-1,15,0,0,0,0
+,AiM,ISR_MAC_ABK,2,-1,-1,15,-1,0,0,0
 ,,,,,,,,,,
 #,set CFR[mr13.broadcast at address 0x0010] to 1 (MAC from global buffer),,,,,,,,,
 ,W,CFR,0x0010,1,,,,,,

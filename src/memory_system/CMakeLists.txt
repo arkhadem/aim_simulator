@@ -6,6 +6,7 @@ target_sources(
 
   impl/dummy_memory_system.cpp
   impl/generic_DRAM_system.cpp
+  impl/aim_DRAM_system.cpp
 )
 
 target_link_libraries(

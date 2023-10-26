@@ -6,6 +6,7 @@
 #include "memory_system/memory_system.h"
 #include "translation/translation.h"
 #include <cstdint>
+#include <math.h>
 #include <vector>
 
 namespace Ramulator {
@@ -35,7 +36,7 @@ protected:
         EWMUL_BG,
         AFM
     };
-    std::map<CFR, uint16_t> CFR_values;
+    std::map<CFR, int32_t> CFR_values;
     std::map<Addr_t, CFR> address_to_CFR;
 
     uint8_t CountSetBit(const uint8_t byte) const {
@@ -123,7 +124,7 @@ public:
             .desc("total number of cycles that AiM DMA does not receive ISR because of lack of enough ISR space");
 
         for (const auto type : {Request::Type::Read, Request::Type::Write}) {
-            for (const auto mem_access_region : {Request::MemAccessRegion::MIN, Request::MemAccessRegion::MAX}) {
+            for (const auto mem_access_region : {Request::MemAccessRegion::GPR, Request::MemAccessRegion::CFR, Request::MemAccessRegion::MEM}) {
                 s_num_RW_requests[type][mem_access_region] = 0;
                 register_stat(s_num_RW_requests[type][mem_access_region])
                     .name(fmt::format("total_num_{}_{}_requests",
@@ -134,11 +135,11 @@ public:
                                       AiMISRInfo::convert_mem_access_region_to_str(mem_access_region)));
             }
         }
-        for (const auto opcode : {Request::Opcode::MIN, Request::Opcode::MAX}) {
-            s_num_AiM_requests[opcode] = 0;
-            register_stat(s_num_AiM_requests[opcode])
-                .name(fmt::format("total_num_AiM_{}_requests", AiMISRInfo::convert_AiM_opcode_to_str(opcode)))
-                .desc(fmt::format("total number of AiM {} requests", AiMISRInfo::convert_AiM_opcode_to_str(opcode)));
+        for (int opcode = (int)Request::Opcode::MIN + 1; opcode < (int)Request::Opcode::MAX; opcode++) {
+            s_num_AiM_requests[(Request::Opcode)opcode] = 0;
+            register_stat(s_num_AiM_requests[(Request::Opcode)opcode])
+                .name(fmt::format("total_num_AiM_{}_requests", AiMISRInfo::convert_AiM_opcode_to_str((Request::Opcode)opcode)))
+                .desc(fmt::format("total number of AiM {} requests", AiMISRInfo::convert_AiM_opcode_to_str((Request::Opcode)opcode)));
         }
     };
 
@@ -203,7 +204,7 @@ public:
                     uint16_t opsize = host_req.opsize;
                     uint8_t ch_mask = host_req.channel_mask;
                     uint8_t channel_count = CountSetBit(ch_mask);
-                    Request aim_req(-1, Request::Type::AIM);
+                    Request aim_req(-1, (int)Request::Type::AIM);
                     aim_req.opcode = host_req.opcode;
                     aim_req.callback = callback;
                     all_AiM_requests_sent = true;
@@ -239,6 +240,7 @@ public:
 
                         if (opcode == Request::Opcode::ISR_AF) {
                             aim_req.afm = CFR_values[CFR::AFM];
+                            aim_req.row_addr = 1 << 29;
                         }
 
                         if ((host_req.opcode == Request::Opcode::ISR_MAC_ABK) ||
@@ -265,8 +267,10 @@ public:
                             for (int cnt = 0; cnt < channel_count; cnt++) {
                                 uint8_t channel_id = FindFirstChannelIndex(channel_mask);
                                 channel_mask &= (~channel_id);
+                                channel_id = log2(channel_id);
 
                                 aim_req.AiM_req_id = AiM_req_id++;
+                                aim_req.host_req_id = host_req.host_req_id;
                                 apply_addr_mapp(aim_req, channel_id);
                                 if (m_controllers[channel_id]->send(aim_req) == false) {
                                     remaining_AiM_requests[channel_id].push(aim_req);
@@ -293,7 +297,15 @@ public:
                     }
 
                     case Request::Opcode::ISR_EOC: {
-                        // Do nothing
+                        for (int channel_id = 0; channel_id < m_controllers.size(); channel_id++) {
+                            aim_req.AiM_req_id = AiM_req_id++;
+                            aim_req.host_req_id = host_req.host_req_id;
+                            if (m_controllers[channel_id]->send(aim_req) == false) {
+                                remaining_AiM_requests[channel_id].push(aim_req);
+                                all_AiM_requests_sent = false;
+                            }
+                            stalled_AiM_requests += 1;
+                        }
                         break;
                     } break;
 
@@ -315,8 +327,9 @@ public:
                         break;
                     }
                     case Request::MemAccessRegion::MEM: {
-                        Request aim_req(host_req.addr, Request::Type::Read);
+                        Request aim_req(host_req.addr, (int)Request::Type::Read);
                         aim_req.AiM_req_id = AiM_req_id++;
+                        aim_req.host_req_id = host_req.host_req_id;
                         m_addr_mapper->apply(aim_req);
                         int channel_id = aim_req.addr_vec[0];
                         if (m_controllers[channel_id]->send(aim_req) == false) {
@@ -339,7 +352,7 @@ public:
                         if (address_to_CFR.find(host_req.addr) == address_to_CFR.end()) {
                             throw ConfigurationError("AiMDRAMSystem: unknown CFR at location {}!", (int)host_req.addr);
                         }
-                        CFR_values[address_to_CFR[host_req.addr]] = host_req.data[0];
+                        CFR_values[address_to_CFR[host_req.addr]] = host_req.data;
                         all_AiM_requests_sent = true;
                         break;
                     }
@@ -349,8 +362,9 @@ public:
                         break;
                     }
                     case Request::MemAccessRegion::MEM: {
-                        Request aim_req(host_req.addr, Request::Type::Write);
+                        Request aim_req(host_req.addr, (int)Request::Type::Write);
                         aim_req.AiM_req_id = AiM_req_id++;
+                        aim_req.host_req_id = host_req.host_req_id;
                         m_addr_mapper->apply(aim_req);
                         int channel_id = aim_req.addr_vec[0];
                         if (m_controllers[channel_id]->send(aim_req) == false) {
@@ -372,7 +386,8 @@ public:
                 }
                 }
                 if ((stalled_AiM_requests == 0) && (all_AiM_requests_sent)) {
-                    host_req.callback(host_req);
+                    if (host_req.callback)
+                        host_req.callback(host_req);
                     request_queue.pop();
                 }
             }
@@ -393,7 +408,8 @@ public:
         stalled_AiM_requests--;
 
         if (stalled_AiM_requests == 0) {
-            host_req.callback(host_req);
+            if (host_req.callback)
+                host_req.callback(host_req);
             request_queue.pop();
         }
     }

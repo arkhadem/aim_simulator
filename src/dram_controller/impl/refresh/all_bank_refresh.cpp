@@ -1,6 +1,7 @@
 #include <vector>
 
 #include "base/base.h"
+#include "base/request.h"
 #include "dram_controller/controller.h"
 #include "dram_controller/refresh.h"
 
@@ -37,7 +38,7 @@ public:
         m_next_refresh_cycle = m_nrefi;
     };
 
-    void tick() {
+    void tick() override {
         m_clk++;
 
         if (m_clk == m_next_refresh_cycle) {

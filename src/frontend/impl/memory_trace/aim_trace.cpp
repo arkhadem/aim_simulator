@@ -1,4 +1,5 @@
 #include <cassert>
+#include <cstdio>
 #include <filesystem>
 #include <fstream>
 #include <ios>
@@ -14,6 +15,8 @@ namespace Ramulator {
 
 namespace fs = std::filesystem;
 
+Request AiMTrace_request(-1, -1);
+
 class AiMTrace : public IFrontEnd,
                  public Implementation {
 
@@ -25,16 +28,18 @@ private:
     size_t m_curr_trace_idx = 0;
 
     bool m_trace_reached_EOC = false;
+    bool m_trace_reached_calledback = false;
 
     Logger_t m_logger;
 
     std::ifstream *trace_file;
     std::string file_path;
 
-    Request req;
     bool remaining_req = false;
 
     int host_req_id = 0;
+
+    std::function<void(Request &)> callback;
 
 public:
     void init() override {
@@ -47,15 +52,16 @@ public:
         m_logger->info("Opening trace file {} ...", trace_path_str);
         init_trace(trace_path_str);
         remaining_req = false;
+        callback = std::bind(&AiMTrace::receive, this, std::placeholders::_1);
     };
 
     void tick() override {
-        if (m_trace_reached_EOC == false) {
-            if (remaining_req == false) {
-                req = get_host_request();
-                remaining_req = true;
-            }
-            bool request_sent = m_memory_system->send(req);
+        if ((remaining_req == false) && (m_trace_reached_EOC == false)) {
+            AiMTrace_request = get_host_request();
+            remaining_req = true;
+        }
+        if (remaining_req == true) {
+            bool request_sent = m_memory_system->send(AiMTrace_request);
             if (request_sent)
                 remaining_req = false;
         }
@@ -87,12 +93,21 @@ private:
         }
     }
 
+    void receive(Request &req) {
+        assert(req.type == Request::Type::AIM);
+        assert(req.opcode == Request::Opcode::ISR_EOC);
+        m_logger->info("End-Of-Compute Called Back!");
+        m_trace_reached_calledback = true;
+    }
+
     Request get_host_request() {
         std::string line;
 
         if (m_trace_reached_EOC == true) {
             throw ConfigurationError("Trace: asking for host request while EOC reached!");
         }
+
+        Request req(-1, -1);
 
         while (true) {
             try {
@@ -110,6 +125,7 @@ private:
             } else {
                 std::vector<std::string> tokens;
                 tokenize(tokens, line, ",");
+
                 if (tokens.empty() == true) {
                     // It's an empty line
                     continue;
@@ -118,14 +134,19 @@ private:
                     // It's a comment
                     continue;
                 } else {
-                    Request req(-1, Request::Type::MAX);
 
                     req.host_req_id = host_req_id++;
 
                     int token_idx = 0;
 
+                    for (auto token : tokens) {
+                        printf("\"%s\" ", token.c_str());
+                    }
+                    printf("\n");
+
                     // Decoding trace type
                     req.type = AiMISRInfo::convert_str_to_type(tokens[token_idx++]);
+                    req.type_id = (int)req.type;
 
                     if (req.type == Request::Type::AIM) {
 
@@ -153,6 +174,7 @@ private:
 
                         if (req.opcode == Request::Opcode::ISR_EOC) {
                             m_trace_reached_EOC = true;
+                            req.callback = callback;
                             m_logger->info("End-Of-Compute Reached!");
                         }
                     } else {
@@ -161,7 +183,6 @@ private:
                         req.mem_access_region = AiMISRInfo::convert_str_to_mem_access_region(tokens[token_idx++]);
 
                         DECODE_AND_SET_FIELD(addr)
-                        DECODE_AND_SET_FIELD(addr_max)
                         DECODE_AND_SET_FIELD(data)
 
                         if (req.mem_access_region == Request::MemAccessRegion::CFR) {
@@ -182,7 +203,7 @@ private:
     };
 
     // TODO: FIXME
-    bool is_finished() override { return m_trace_reached_EOC; };
+    bool is_finished() override { return m_trace_reached_calledback; };
 };
 
 } // namespace Ramulator

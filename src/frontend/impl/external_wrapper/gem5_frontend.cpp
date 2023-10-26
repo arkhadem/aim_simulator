@@ -16,7 +16,7 @@ public:
     void tick() override{};
 
     bool receive_external_requests(int req_type_id, Addr_t addr, int source_id, std::function<void(Request &)> callback) override {
-        return m_memory_system->send({addr, (Ramulator::Request::Type)req_type_id, source_id, callback});
+        return m_memory_system->send({addr, req_type_id, source_id, callback});
     }
 
 private:

@@ -202,7 +202,7 @@ void SimpleO3LLC::evict_line(CacheSet_t &set, CacheSet_t::iterator victim_it) {
 
     // Generate writeback request if victim line is dirty
     if (victim_it->dirty) {
-        Request writeback_req(victim_it->addr, Request::Type::Write);
+        Request writeback_req(victim_it->addr, (int)Request::Type::Write);
         m_miss_list.push_back(std::make_pair(m_clk + m_latency, writeback_req));
 
         DEBUG_LOG(DSIMPLEO3LLC, m_logger, "Writeback Request will be issued at Clk={}.", m_clk + m_latency);

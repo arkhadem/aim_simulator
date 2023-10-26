@@ -1,6 +1,7 @@
 #include "base/request.h"
 #include "dram_controller/controller.h"
 #include "memory_system/memory_system.h"
+#include <cstdio>
 #include <string>
 
 namespace Ramulator {
@@ -151,6 +152,7 @@ public:
 
     void tick() override {
         m_clk++;
+        printf("[CH %d MC_CLK %ld]\n", m_channel_id, m_clk);
 
         // 1. Serve completed reads
         serve_completed_reads();
@@ -162,30 +164,39 @@ public:
         ReqBuffer *buffer = nullptr;
         bool request_found = schedule_request(req_it, buffer);
 
-        // 3. Update all plugins
-        for (auto plugin : m_plugins) {
-            plugin->update(request_found, req_it);
-        }
+        // // 3. Update all plugins
+        // for (auto plugin : m_plugins) {
+        //     plugin->update(request_found, req_it);
+        // }
 
         // 4. Finally, issue the commands to serve the request
         if (request_found) {
-            // If we find a real request to serve
-            m_dram->issue_command(req_it->command, req_it->addr_vec);
-
-            // If we are issuing the last command, set depart clock cycle and move the request to the pending queue
-            if (req_it->command == req_it->final_command) {
-                if (req_it->is_reader()) {
-                    req_it->depart = m_clk + m_dram->m_read_latency;
-                    pending.push_back(*req_it);
-                }
-                // else if (req_it->type == Request::Type::Write) {
-                //     // TODO: Add code to update statistics
-                // }
+            if (req_it->opcode == Request::Opcode::ISR_EOC) {
+                req_it->depart = m_clk;
+                pending.push_back(*req_it);
                 buffer->remove(req_it);
-            } else if (req_it->type != Request::Type::AIM) {
-                if (m_dram->m_command_meta(req_it->command).is_opening) {
-                    m_active_buffer.enqueue(*req_it);
+                printf("EOC ready for callback\n");
+            } else {
+                // If we find a real request to serve
+                printf("Issuing %s for %s\n", std::string(m_dram->m_commands(req_it->command)).c_str(), req_it->c_str());
+
+                m_dram->issue_command(req_it->command, req_it->addr_vec);
+
+                // If we are issuing the last command, set depart clock cycle and move the request to the pending queue
+                if (req_it->command == req_it->final_command) {
+                    if (req_it->is_reader()) {
+                        req_it->depart = m_clk + m_dram->m_read_latency;
+                        pending.push_back(*req_it);
+                    }
+                    // else if (req_it->type == Request::Type::Write) {
+                    //     // TODO: Add code to update statistics
+                    // }
                     buffer->remove(req_it);
+                } else if (req_it->type != Request::Type::AIM) {
+                    if (m_dram->m_command_meta(req_it->command).is_opening) {
+                        m_active_buffer.enqueue(*req_it);
+                        buffer->remove(req_it);
+                    }
                 }
             }
         }
@@ -213,6 +224,8 @@ private:
                 if (req.callback) {
                     // If the request comes from outside (e.g., processor), call its callback
                     req.callback(req);
+                } else {
+                    printf("Warning: %s doesn't have callback set but it is in the pending queue!\n", req.c_str());
                 }
                 // Finally, remove this request from the pending queue
                 pending.pop_front();
@@ -268,9 +281,14 @@ private:
             if (!request_found) {
                 if (m_aim_buffer.size() != 0) {
                     req_it = m_aim_buffer.begin();
-                    req_it->command = m_dram->get_preq_command(req_it->final_command, req_it->addr_vec);
-                    request_found = m_dram->check_ready(req_it->command, req_it->addr_vec);
-                    req_buffer = &m_aim_buffer;
+                    if (req_it->opcode == Request::Opcode::ISR_EOC) {
+                        req_buffer = &m_aim_buffer;
+                        return true;
+                    } else {
+                        req_it->command = m_dram->get_preq_command(req_it->final_command, req_it->addr_vec);
+                        request_found = m_dram->check_ready(req_it->command, req_it->addr_vec);
+                        req_buffer = &m_aim_buffer;
+                    }
                 } else {
                     // Query the write policy to decide which buffer to serve
                     set_write_mode();

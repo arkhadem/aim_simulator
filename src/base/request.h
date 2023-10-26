@@ -12,7 +12,6 @@ namespace Ramulator {
 
 struct Request {
     Addr_t addr = -1;
-    Addr_t addr_max = -1;
     Data_t data;
     AddrVec_t addr_vec{};
     int host_req_id = -1;
@@ -122,11 +121,15 @@ struct Request {
     Clk_t arrive = -1; // Clock cycle when the request arrive at the memory controller
     Clk_t depart = -1; // Clock cycle when the request depart the memory controller
 
+    int type_id = -1;
+
     std::function<void(Request &)> callback;
 
-    Request(Addr_t addr, Type type);
-    Request(AddrVec_t addr_vec, Type type);
-    Request(Addr_t addr, Type type, int source_id, std::function<void(Request &)> callback);
+    Request(Addr_t addr, int type_id);
+    Request(AddrVec_t addr_vec, int type_id);
+    Request(Addr_t addr, int type_id, int source_id, std::function<void(Request &)> callback);
+
+    const char *c_str();
 
     bool is_reader();
 };
@@ -178,11 +181,13 @@ public:
     void is_field_value_legal(Field field, T value) {
         if (is_field_legal(field)) {
             if (value == (T)-1) {
-                throw ConfigurationError("Trace: opcode {} must be provided with field {}!", (int)opcode, (int)field);
+                printf("Trace: opcode %d must be provided with field %d!", (int)opcode, (int)field);
+                exit(-1);
             }
         } else {
             if (value != (T)-1) {
-                throw ConfigurationError("Trace: opcode {} does not accept field {}!", (int)opcode, (int)field);
+                printf("Trace: opcode %d does not accept field %d!", (int)opcode, (int)field);
+                exit(-1);
             }
         }
     }
@@ -274,6 +279,7 @@ public:
         aim_opcode_to_str[Request::Opcode::ISR_RD_SBK] = "ISR_RD_SBK";
         opcode_str_to_aim_ISR["ISR_RD_SBK"] = AiMISR(Request::Opcode::ISR_RD_SBK,
                                                      {AiMISR::Field::opsize,
+                                                      AiMISR::Field::GPR_addr_0,
                                                       AiMISR::Field::channel_mask,
                                                       AiMISR::Field::bank_index,
                                                       AiMISR::Field::row_addr,
@@ -377,7 +383,7 @@ public:
                                                   {},
                                                   false, // channel_count_eq_opsize
                                                   false, // channel_count_eq_one
-                                                  false, // AiM_DMA_blocking
+                                                  true,  // AiM_DMA_blocking
                                                   "DMA"  // target_level
         );
 
@@ -397,8 +403,10 @@ public:
     }
 
     static bool type_valid(std::string type_str) {
-        if (str_to_type.size() == 0)
-            throw ConfigurationError("AiMISRInfo not initialized!");
+        if (str_to_type.size() == 0) {
+            printf("AiMISRInfo not initialized!");
+            exit(-1);
+        }
 
         if (str_to_type.find(type_str) == str_to_type.end())
             return false;
@@ -406,8 +414,10 @@ public:
     }
 
     static bool type_valid(Request::Type type) {
-        if (type_to_str.size() == 0)
-            throw ConfigurationError("AiMISRInfo not initialized!");
+        if (type_to_str.size() == 0) {
+            printf("AiMISRInfo not initialized!");
+            exit(-1);
+        }
 
         if (type_to_str.find(type) == type_to_str.end())
             return false;
@@ -416,21 +426,25 @@ public:
 
     static Request::Type convert_str_to_type(std::string type_str) {
         if (type_valid(type_str) == false) {
-            throw ConfigurationError("Trace: unknown type {}!", type_str);
+            printf("Trace: unknown type %s!", type_str.c_str());
+            exit(-1);
         }
         return str_to_type[type_str];
     }
 
     static std::string convert_type_to_str(Request::Type type) {
         if (type_valid(type) == false) {
-            throw ConfigurationError("Trace: unknown type {}!", (int)type);
+            printf("Trace: unknown type %d!", (int)type);
+            exit(-1);
         }
         return type_to_str[type];
     }
 
     static bool AiM_opcode_valid(std::string AiM_opcode_str) {
-        if (opcode_str_to_aim_ISR.size() == 0)
-            throw ConfigurationError("AiMISRInfo not initialized!");
+        if (opcode_str_to_aim_ISR.size() == 0) {
+            printf("AiMISRInfo not initialized!");
+            exit(-1);
+        }
 
         if (opcode_str_to_aim_ISR.find(AiM_opcode_str) == opcode_str_to_aim_ISR.end())
             return false;
@@ -438,8 +452,10 @@ public:
     }
 
     static bool AiM_opcode_valid(Request::Opcode AiM_opcode) {
-        if (aim_opcode_to_str.size() == 0)
-            throw ConfigurationError("AiMISRInfo not initialized!");
+        if (aim_opcode_to_str.size() == 0) {
+            printf("AiMISRInfo not initialized!");
+            exit(-1);
+        }
 
         if (aim_opcode_to_str.find(AiM_opcode) == aim_opcode_to_str.end())
             return false;
@@ -448,7 +464,8 @@ public:
 
     static AiMISR convert_opcode_str_to_AiM_ISR(std::string AiM_opcode_str) {
         if (AiM_opcode_valid(AiM_opcode_str) == false) {
-            throw ConfigurationError("Trace: unknown AiM opcode {}!", AiM_opcode_str);
+            printf("Trace: unknown AiM opcode %s!", AiM_opcode_str.c_str());
+            exit(-1);
         }
         return opcode_str_to_aim_ISR[AiM_opcode_str];
     }
@@ -459,14 +476,17 @@ public:
 
     static std::string convert_AiM_opcode_to_str(Request::Opcode AiM_opcode) {
         if (AiM_opcode_valid(AiM_opcode) == false) {
-            throw ConfigurationError("Trace: unknown AiM opcode {}!", (int)AiM_opcode);
+            printf("Trace: unknown AiM opcode %d!", (int)AiM_opcode);
+            exit(-1);
         }
         return aim_opcode_to_str[AiM_opcode];
     }
 
     static bool mem_access_region_valid(std::string mem_access_region_str) {
-        if (str_to_mem_access_region.size() == 0)
-            throw ConfigurationError("AiMISRInfo not initialized!");
+        if (str_to_mem_access_region.size() == 0) {
+            printf("AiMISRInfo not initialized!");
+            exit(-1);
+        }
 
         if (str_to_mem_access_region.find(mem_access_region_str) == str_to_mem_access_region.end())
             return false;
@@ -474,8 +494,10 @@ public:
     }
 
     static bool mem_access_region_valid(Request::MemAccessRegion mem_access_region) {
-        if (mem_access_region_to_str.size() == 0)
-            throw ConfigurationError("AiMISRInfo not initialized!");
+        if (mem_access_region_to_str.size() == 0) {
+            printf("AiMISRInfo not initialized!");
+            exit(-1);
+        }
 
         if (mem_access_region_to_str.find(mem_access_region) == mem_access_region_to_str.end())
             return false;
@@ -484,14 +506,16 @@ public:
 
     static Request::MemAccessRegion convert_str_to_mem_access_region(std::string mem_access_region_str) {
         if (mem_access_region_valid(mem_access_region_str) == false) {
-            throw ConfigurationError("Trace: unknown mem_access_region {}!", mem_access_region_str);
+            printf("Trace: unknown mem_access_region %s!", mem_access_region_str.c_str());
+            exit(-1);
         }
         return str_to_mem_access_region[mem_access_region_str];
     }
 
     static std::string convert_mem_access_region_to_str(Request::MemAccessRegion mem_access_region) {
         if (mem_access_region_valid(mem_access_region) == false) {
-            throw ConfigurationError("Trace: unknown mem_access_region {}!", (int)mem_access_region);
+            printf("Trace: unknown mem_access_region %d!", (int)mem_access_region);
+            exit(-1);
         }
         return mem_access_region_to_str[mem_access_region];
     }

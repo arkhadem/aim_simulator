@@ -1,6 +1,7 @@
 #ifndef RAMULATOR_DRAM_LAMBDAS_ACTION_H
 #define RAMULATOR_DRAM_LAMBDAS_ACTION_H
 
+#include <cassert>
 #include <spdlog/spdlog.h>
 
 #include "dram/node.h"
@@ -16,6 +17,8 @@ namespace Bank {
 template <class T>
 void ACT(typename T::Node *node, int cmd, const AddrVec_t &addr_vec, Clk_t clk) {
     int target_id = addr_vec[node->m_level + 1];
+    assert(node->m_state == T::m_states["Closed"]);
+    assert(node->m_row_state.size() == 0);
     node->m_state = T::m_states["Opened"];
     node->m_row_state[target_id] = T::m_states["Opened"];
 };
@@ -62,6 +65,8 @@ void ACT4b(typename T::Node *node, int cmd, const AddrVec_t &addr_vec, Clk_t clk
     assert(node->m_level == T::m_levels["bankgroup"]);
     int target_id = addr_vec[T::m_levels["row"]];
     for (auto bank : node->m_child_nodes) {
+        // assert(bank->m_state == T::m_states["Closed"]);
+        // assert(bank->m_row_state.size() == 0);
         bank->m_state = T::m_states["Opened"];
         bank->m_row_state[target_id] = T::m_states["Opened"];
     }
@@ -121,6 +126,8 @@ void ACTab(typename T::Node *node, int cmd, const AddrVec_t &addr_vec, Clk_t clk
     if constexpr (T::m_levels["bank"] - T::m_levels["channel"] == 2) {
         for (auto bg : node->m_child_nodes) {
             for (auto bank : bg->m_child_nodes) {
+                // assert(bank->m_state == T::m_states["Closed"]);
+                // assert(bank->m_row_state.size() == 0);
                 bank->m_state = T::m_states["Opened"];
                 bank->m_row_state[target_id] = T::m_states["Opened"];
             }
@@ -129,6 +136,8 @@ void ACTab(typename T::Node *node, int cmd, const AddrVec_t &addr_vec, Clk_t clk
         for (auto pc : node->m_child_nodes) {
             for (auto bg : pc->m_child_nodes) {
                 for (auto bank : bg->m_child_nodes) {
+                    // assert(bank->m_state == T::m_states["Closed"]);
+                    // assert(bank->m_row_state.size() == 0);
                     bank->m_state = T::m_states["Opened"];
                     bank->m_row_state[target_id] = T::m_states["Opened"];
                 }

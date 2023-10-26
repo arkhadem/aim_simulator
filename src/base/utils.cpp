@@ -1,6 +1,10 @@
 #include "base/utils.h"
 
+#include <algorithm>
+#include <cctype>
 #include <cstdint>
+#include <iostream>
+#include <string>
 
 namespace Ramulator {
 
@@ -58,10 +62,15 @@ void tokenize(std::vector<std::string> &tokens, std::string line, std::string de
     size_t pos = 0;
     size_t last_pos = 0;
     while ((pos = line.find(delim, last_pos)) != std::string::npos) {
-        tokens.push_back(line.substr(last_pos, pos - last_pos));
+        std::string token = line.substr(last_pos, pos - last_pos);
+        token.erase(std::remove_if(token.begin(), token.end(), ::isspace), token.end());
+        if (token != "")
+            tokens.push_back(token);
         last_pos = pos + 1;
     }
-    tokens.push_back(line.substr(last_pos));
+    std::string token = line.substr(last_pos);
+    if (token != "")
+        tokens.push_back(token);
 }
 
 } // namespace Ramulator

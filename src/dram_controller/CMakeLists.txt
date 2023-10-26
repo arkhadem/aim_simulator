@@ -9,6 +9,7 @@ target_sources(
 
   impl/dummy_controller.cpp
   impl/generic_dram_controller.cpp
+  impl/AiM_dram_controller.cpp
   
   impl/scheduler/generic_scheduler.cpp
 

@@ -44,7 +44,7 @@ public:
     void tick() override {
         const Trace &t = m_trace[m_curr_trace_idx];
         bool request_sent = m_memory_system->send(
-            {t.addr, t.is_write ? Request::Type::Write : Request::Type::Read});
+            {t.addr, t.is_write ? (int)Request::Type::Write : (int)Request::Type::Read});
         if (request_sent) {
             m_curr_trace_idx = (m_curr_trace_idx + 1) % m_trace_length;
             m_trace_count++;

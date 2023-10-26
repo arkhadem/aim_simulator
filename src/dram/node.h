@@ -3,6 +3,7 @@
 
 #include <cassert>
 #include <concepts>
+#include <cstdio>
 #include <deque>
 #include <functional>
 #include <map>
@@ -88,7 +89,7 @@ struct DRAMNodeBase {
     };
 
     void update_states(int command, const AddrVec_t &addr_vec, Clk_t clk) {
-        int child_id = addr_vec[m_level + 1];
+        printf("level: %d\n", m_level);
         if (m_spec->m_actions[m_level][command]) {
             // update the state machine at this level
             m_spec->m_actions[m_level][command](static_cast<NodeType *>(this), command, addr_vec, clk);
@@ -98,6 +99,7 @@ struct DRAMNodeBase {
             return;
         }
         // recursively update child nodes
+        int child_id = addr_vec[m_level + 1];
         m_child_nodes[child_id]->update_states(command, addr_vec, clk);
     };
 
@@ -160,7 +162,7 @@ struct DRAMNodeBase {
     int get_preq_command(int command, const AddrVec_t &addr_vec, Clk_t m_clk) {
         int child_id = addr_vec[m_level + 1];
         if (m_spec->m_preqs[m_level][command]) {
-            int preq_cmd = m_spec->m_preqs[m_level][command](static_cast<NodeType *>(this), command, child_id, m_clk);
+            int preq_cmd = m_spec->m_preqs[m_level][command](static_cast<NodeType *>(this), command, addr_vec, m_clk);
             if (preq_cmd != -1) {
                 // stop recursion: there is a prerequisite at this level
                 return preq_cmd;

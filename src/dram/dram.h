@@ -35,8 +35,8 @@ public:
     SpecDef m_requests;                                    // The definition of all requests supported
     SpecLUT<Command_t> m_request_translations{m_requests}; // A LUT of the final DRAM commands needed by every request
 
-    SpecDef m_aim_requests;                                    // The definition of all AiM requests supported
-    SpecLUT<Command_t> m_aim_request_translations{m_requests}; // A LUT of the final DRAM commands needed by every AiM request
+    SpecDef m_aim_requests;                                        // The definition of all AiM requests supported
+    SpecLUT<Command_t> m_aim_request_translations{m_aim_requests}; // A LUT of the final DRAM commands needed by every AiM request
 
     /************************************************
    *                Node States
@@ -120,17 +120,19 @@ public:
     }
 };
 
-#define RAMULATOR_DECLARE_SPECS()                               \
-    IDRAM::m_internal_prefetch_size = m_internal_prefetch_size; \
-    IDRAM::m_levels = m_levels;                                 \
-    IDRAM::m_commands = m_commands;                             \
-    IDRAM::m_command_scopes = m_command_scopes;                 \
-    IDRAM::m_command_meta = m_command_meta;                     \
-    IDRAM::m_command_meta = m_command_meta;                     \
-    IDRAM::m_requests = m_requests;                             \
-    IDRAM::m_request_translations = m_request_translations;     \
-    IDRAM::m_states = m_states;                                 \
-    IDRAM::m_init_states = m_init_states;                       \
+#define RAMULATOR_DECLARE_SPECS()                                   \
+    IDRAM::m_internal_prefetch_size = m_internal_prefetch_size;     \
+    IDRAM::m_levels = m_levels;                                     \
+    IDRAM::m_commands = m_commands;                                 \
+    IDRAM::m_command_scopes = m_command_scopes;                     \
+    IDRAM::m_command_meta = m_command_meta;                         \
+    IDRAM::m_command_meta = m_command_meta;                         \
+    IDRAM::m_requests = m_requests;                                 \
+    IDRAM::m_aim_requests = m_aim_requests;                         \
+    IDRAM::m_request_translations = m_request_translations;         \
+    IDRAM::m_aim_request_translations = m_aim_request_translations; \
+    IDRAM::m_states = m_states;                                     \
+    IDRAM::m_init_states = m_init_states;                           \
     IDRAM::m_timings = m_timings;
 
 } // namespace Ramulator

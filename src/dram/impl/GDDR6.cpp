@@ -17,108 +17,176 @@ public:
         {"GDDR6_16Gb_x16", {16 << 10, 16, {2, 4, 4, 1 << 14, 1 << 11}}},
         {"GDDR6_32Gb_x8", {32 << 10, 8, {2, 4, 4, 1 << 16, 1 << 11}}},
         {"GDDR6_32Gb_x16", {32 << 10, 16, {2, 4, 4, 1 << 15, 1 << 11}}},
+        {"GDDR6_AiM_org",
+         {64 << 10,    // density
+          16,          // DQ (2B)
+          {16,         // Ch
+           4,          // Bg
+           4,          // Ba
+           1 << 14,    // Ro (16K)
+           1 << 10}}}, // Co (1K)
     };
 
     inline static const std::map<std::string, std::vector<int>> timing_presets = {
         {"GDDR6_2000_1350mV_double", // name
-         {2000,                      // rate
-          8,                         // nBL
-          24,                        // nCL
-          26,                        // nRCDRD
-          16,                        // nRCDWR
-          26,                        // nRP
-          53,                        // nRAS
-          79,                        // nRC
-          26,                        // nWR
-          4,                         // nRTP
-          6,                         // nCWL
-          4,                         // nCCDS
-          6,                         // nCCDL
-          7,                         // nRRDS
-          7,                         // nRRDL
-          9,                         // nWTRS
-          11,                        // nWTRL
-          28,                        // nFAW
-          210,                       // nRFC
-          105,                       // nRFCpb
-          14,                        // nRREFD
-          3333,                      // nREFI
-          570}},                     // tCK_ps
+         {
+             2000, // rate
+             8,    // nBL
+             24,   // nCL
+             26,   // nRCDRD
+             16,   // nRCDWR
+             26,   // nRP
+             53,   // nRAS
+             79,   // nRC
+             26,   // nWR
+             4,    // nRTP
+             6,    // nCWL
+             4,    // nCCDS
+             6,    // nCCDL
+             7,    // nRRDS
+             7,    // nRRDL
+             9,    // nWTRS
+             11,   // nWTRL
+             28,   // nFAW
+             210,  // nRFC
+             105,  // nRFCpb
+             14,   // nRREFD
+             3333, // nREFI
+             0,    // nCLREG
+             1,    // nCLGB
+             1,    // nCWLREG
+             1,    // nCWLGB
+             1,    // nWPRE
+             570   // tCK_ps
+         }},
 
         {"GDDR6_2000_1250mV_double", // name
-         {2000,                      // rate
-          8,                         // nBL
-          24,                        // nCL
-          30,                        // nRCDRD
-          19,                        // nRCDWR
-          30,                        // nRP
-          60,                        // nRAS
-          89,                        // nRC
-          30,                        // nWR
-          4,                         // nRTP
-          6,                         // nCWL
-          4,                         // nCCDS
-          6,                         // nCCDL
-          11,                        // nRRDS
-          11,                        // nRRDL
-          9,                         // nWTRS
-          11,                        // nWTRL
-          42,                        // nFAW
-          210,                       // nRFC
-          105,                       // nRFCpb
-          21,                        // nRREFD
-          3333,                      // nREFI
-          570}},                     // tCK_ps
+         {
+             2000, // rate
+             8,    // nBL
+             24,   // nCL
+             30,   // nRCDRD
+             19,   // nRCDWR
+             30,   // nRP
+             60,   // nRAS
+             89,   // nRC
+             30,   // nWR
+             4,    // nRTP
+             6,    // nCWL
+             4,    // nCCDS
+             6,    // nCCDL
+             11,   // nRRDS
+             11,   // nRRDL
+             9,    // nWTRS
+             11,   // nWTRL
+             42,   // nFAW
+             210,  // nRFC
+             105,  // nRFCpb
+             21,   // nRREFD
+             3333, // nREFI
+             0,    // nCLREG
+             1,    // nCLGB
+             1,    // nCWLREG
+             1,    // nCWLGB
+             1,    // nWPRE
+             570   // tCK_ps
+         }},
 
         {"GDDR6_2000_1350mV_quad", // name
-         {2000,                    // rate
-          4,                       // nBL
-          24,                      // nCL
-          26,                      // nRCDRD
-          16,                      // nRCDWR
-          26,                      // nRP
-          53,                      // nRAS
-          79,                      // nRC
-          26,                      // nWR
-          4,                       // nRTP
-          6,                       // nCWL
-          4,                       // nCCDS
-          6,                       // nCCDL
-          7,                       // nRRDS
-          7,                       // nRRDL
-          9,                       // nWTRS
-          11,                      // nWTRL
-          28,                      // nFAW
-          210,                     // nRFC
-          105,                     // nRFCpb
-          14,                      // nRREFD
-          3333,                    // nREFI
-          570}},                   // tCK_ps
+         {
+             2000, // rate
+             4,    // nBL
+             24,   // nCL
+             26,   // nRCDRD
+             16,   // nRCDWR
+             26,   // nRP
+             53,   // nRAS
+             79,   // nRC
+             26,   // nWR
+             4,    // nRTP
+             6,    // nCWL
+             4,    // nCCDS
+             6,    // nCCDL
+             7,    // nRRDS
+             7,    // nRRDL
+             9,    // nWTRS
+             11,   // nWTRL
+             28,   // nFAW
+             210,  // nRFC
+             105,  // nRFCpb
+             14,   // nRREFD
+             3333, // nREFI
+             0,    // nCLREG
+             1,    // nCLGB
+             1,    // nCWLREG
+             1,    // nCWLGB
+             1,    // nWPRE
+             570   // tCK_ps
+         }},
 
         {"GDDR6_2000_1250mV_quad", // name
-         {2000,                    // rate
-          4,                       // nBL
-          24,                      // nCL
-          30,                      // nRCDRD
-          19,                      // nRCDWR
-          30,                      // nRP
-          60,                      // nRAS
-          89,                      // nRC
-          30,                      // nWR
-          4,                       // nRTP
-          6,                       // nCWL
-          4,                       // nCCDS
-          6,                       // nCCDL
-          11,                      // nRRDS
-          11,                      // nRRDL
-          9,                       // nWTRS
-          11,                      // nWTRL
-          42,                      // nFAW
-          210,                     // nRFC
-          105,                     // nRFCpb
-          21,                      // nRREFD
-          3333,                    // nREFI
-          570}},                   // tCK_ps
+         {
+             2000, // rate
+             4,    // nBL
+             24,   // nCL
+             30,   // nRCDRD
+             19,   // nRCDWR
+             30,   // nRP
+             60,   // nRAS
+             89,   // nRC
+             30,   // nWR
+             4,    // nRTP
+             6,    // nCWL
+             4,    // nCCDS
+             6,    // nCCDL
+             11,   // nRRDS
+             11,   // nRRDL
+             9,    // nWTRS
+             11,   // nWTRL
+             42,   // nFAW
+             210,  // nRFC
+             105,  // nRFCpb
+             21,   // nRREFD
+             3333, // nREFI
+             0,    // nCLREG
+             1,    // nCLGB
+             1,    // nCWLREG
+             1,    // nCWLGB
+             1,    // nWPRE
+             570   // tCK_ps
+         }},
+
+        {"GDDR6_AiM_timing", // name
+         {
+             2000, // rate
+             2,    // nBL (changed 1.25)
+             25,   // nCL (changed)
+             18,   // nRCDRD (changed)
+             14,   // nRCDWR (changed)
+             16,   // nRP (changed)
+             60,   // nRAS
+             89,   // nRC
+             17,   // nWR (changed 16.625)
+             7,    // nRTP (changed 6.25)
+             6,    // nCWL
+             1,    // nCCDS (changed from ISSCC)
+             6,    // nCCDL
+             11,   // nRRDS
+             11,   // nRRDL
+             9,    // nWTRS
+             11,   // nWTRL
+             42,   // nFAW (not used)
+             210,  // nRFC
+             105,  // nRFCpb
+             21,   // nRREFD
+             3333, // nREFI
+             0,    // nCLREG
+             1,    // nCLGB
+             1,    // nCWLREG
+             1,    // nCWLGB
+             1,    // nWPRE
+             570   // tCK_ps
+         }},
     };
 
     /************************************************
@@ -161,7 +229,8 @@ public:
         "RDMAC16",
         "RDAF16",
         "WRMAC16",
-    };
+        "EOC",
+        "UNKNOWN"};
 
     inline static const ImplLUT m_command_scopes = LUT(
         m_commands, m_levels, {
@@ -186,7 +255,8 @@ public:
                                   {"WRGB", "channel"},
                                   {"RDMAC16", "channel"},
                                   {"RDAF16", "channel"},
-                                  {"WRMAC16", "bank"},
+                                  {"WRMAC16", "channel"},
+                                  {"EOC", "channel"},
                               });
 
     inline static const ImplLUT m_command_meta = LUT<DRAMCommandMeta>(
@@ -214,6 +284,7 @@ public:
                         {"RDMAC16", {false, false, false, false}},
                         {"RDAF16", {false, false, false, false}},
                         {"WRMAC16", {false, false, false, false}},
+                        {"EOC", {false, false, false, false}},
                     });
 
     inline static constexpr ImplDef m_requests = {
@@ -223,22 +294,22 @@ public:
         "PREsb"};
 
     inline static constexpr ImplDef m_aim_requests = {
-        "MIN"
-        "ISR_WR_SBK"
-        "ISR_WR_GB"
-        "ISR_WR_BIAS"
-        "ISR_WR_AFLUT"
-        "ISR_RD_MAC"
-        "ISR_RD_AF"
-        "ISR_RD_SBK"
-        "ISR_COPY_BKGB"
-        "ISR_COPY_GBBK"
-        "ISR_MAC_SBK"
-        "ISR_MAC_ABK"
-        "ISR_AF"
-        "ISR_EWMUL"
-        "ISR_EWADD"
-        "ISR_EOC"
+        "MIN",
+        "ISR_WR_SBK",
+        "ISR_WR_GB",
+        "ISR_WR_BIAS",
+        "ISR_WR_AFLUT",
+        "ISR_RD_MAC",
+        "ISR_RD_AF",
+        "ISR_RD_SBK",
+        "ISR_COPY_BKGB",
+        "ISR_COPY_GBBK",
+        "ISR_MAC_SBK",
+        "ISR_MAC_ABK",
+        "ISR_AF",
+        "ISR_EWMUL",
+        "ISR_EWADD",
+        "ISR_EOC",
         "MAX"};
 
     inline static const ImplLUT m_request_translations = LUT(
@@ -266,7 +337,7 @@ public:
                                         {"ISR_AF", "AF16"},          // 12 - AF16 all banks
                                         {"ISR_EWMUL", "EWMUL16"},    // 14 - EWMUL16 all banks or 1 bank group
                                         {"ISR_EWADD", "UNKNOWN"},    // 15 - Unknown and illegal
-                                        {"ISR_EOC", "UNKNOWN"},      // 16 - Unknown and illegal
+                                        {"ISR_EOC", "EOC"},          // 16 - Unknown and illegal
                                         {"MAX", "UNKNOWN"},          // 17 - Unknown and illegal
                                     });
 
@@ -276,12 +347,32 @@ public:
     //delete nCS
     inline static constexpr ImplDef m_timings = {
         "rate",
-        "nBL", "nCL", "nRCDRD", "nRCDWR", "nRP", "nRAS", "nRC", "nWR", "nRTP", "nCWL",
-        "nCCDS", "nCCDL",
-        "nRRDS", "nRRDL",
-        "nWTRS", "nWTRL",
+        "nBL",
+        "nCL",
+        "nRCDRD",
+        "nRCDWR",
+        "nRP",
+        "nRAS",
+        "nRC",
+        "nWR",
+        "nRTP",
+        "nCWL",
+        "nCCDS",
+        "nCCDL",
+        "nRRDS",
+        "nRRDL",
+        "nWTRS",
+        "nWTRL",
         "nFAW",
-        "nRFC", "nREFI", "nRREFD", "nRFCpb",
+        "nRFC",
+        "nREFI",
+        "nRREFD",
+        "nRFCpb",
+        "nCLREG",
+        "nCLGB",
+        "nCWLREG",
+        "nCWLGB",
+        "nWPRE",
         "tCK_ps"};
 
     /************************************************
@@ -502,7 +593,6 @@ private:
         // Rate and tCK should not be overwritten
         for (int i = 1; i < m_timings.size() - 1; i++) {
             auto timing_name = std::string(m_timings(i));
-
             if (auto provided_timing = param_group("timing").param<int>(timing_name).optional()) {
                 // Check if the user specifies in the number of cycles (e.g., nRCD)
                 m_timing_vals(i) = *provided_timing;
@@ -538,6 +628,37 @@ private:
 
         // changing the direction of the external bus
         m_timing_vals("nWPRE") = 1;
+
+        printf("------------------- Timing Parameters -------------------\n");
+        printf("rate: %d\n", m_timing_vals("rate"));
+        printf("nBL: %d\n", m_timing_vals("nBL"));
+        printf("nCL: %d\n", m_timing_vals("nCL"));
+        printf("nRCDRD: %d\n", m_timing_vals("nRCDRD"));
+        printf("nRCDWR: %d\n", m_timing_vals("nRCDWR"));
+        printf("nRP: %d\n", m_timing_vals("nRP"));
+        printf("nRAS: %d\n", m_timing_vals("nRAS"));
+        printf("nRC: %d\n", m_timing_vals("nRC"));
+        printf("nWR: %d\n", m_timing_vals("nWR"));
+        printf("nRTP: %d\n", m_timing_vals("nRTP"));
+        printf("nCWL: %d\n", m_timing_vals("nCWL"));
+        printf("nCCDS: %d\n", m_timing_vals("nCCDS"));
+        printf("nCCDL: %d\n", m_timing_vals("nCCDL"));
+        printf("nRRDS: %d\n", m_timing_vals("nRRDS"));
+        printf("nRRDL: %d\n", m_timing_vals("nRRDL"));
+        printf("nWTRS: %d\n", m_timing_vals("nWTRS"));
+        printf("nWTRL: %d\n", m_timing_vals("nWTRL"));
+        printf("nFAW: %d\n", m_timing_vals("nFAW"));
+        printf("nRFC: %d\n", m_timing_vals("nRFC"));
+        printf("nRFCpb: %d\n", m_timing_vals("nRFCpb"));
+        printf("nRREFD: %d\n", m_timing_vals("nRREFD"));
+        printf("nREFI: %d\n", m_timing_vals("nREFI"));
+        printf("tCK_ps: %d\n", m_timing_vals("tCK_ps"));
+        printf("nCLREG: %d\n", m_timing_vals("nCLREG"));
+        printf("nCLGB: %d\n", m_timing_vals("nCLGB"));
+        printf("nCWLREG: %d\n", m_timing_vals("nCWLREG"));
+        printf("nCWLGB: %d\n", m_timing_vals("nCWLGB"));
+        printf("nWPRE: %d\n", m_timing_vals("nWPRE"));
+        printf("-------------------------------------------------------\n");
 
 // Populate the timing constraints
 #define V(timing) (m_timing_vals(timing))
@@ -649,7 +770,7 @@ private:
                                       {.level = "channel", .preceding = {"ACT", "ACT4", "ACT16"}, .following = {"REFpb"}, .latency = V("nRRDL")}, // Why RRDL? Shouldn't it be RRDS?
                                       // "The selected bank must be precharged prior to the REFpb command"
                                       {.level = "channel", .preceding = {"ACT16"}, .following = {"REFpb"}, .latency = V("nRC")}, // Why nRC? Shouldn't it be nRAS + nRP? This never happens bevause ACT opens a row and REF's pre-requisite for an open row is PRE
-                                      {.level = "channel", .preceding = {"PRE16"}, .following = {"REFpb"}, .latency = V("nRP")},
+                                      {.level = "channel", .preceding = {"PREA"}, .following = {"REFpb"}, .latency = V("nRP")},
                                       // "A minimum time tRFCpb is required between a REFpb command and an access command to the same bank that follows"
                                       {.level = "channel", .preceding = {"REFpb"}, .following = {"ACT16"}, .latency = V("nRFCpb")},
                                       // "A minimum time tRREFD is required between a  REFpb command and an ACTIVATE command to a different bank"
