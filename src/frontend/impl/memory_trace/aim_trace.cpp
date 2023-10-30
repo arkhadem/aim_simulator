@@ -41,7 +41,7 @@ private:
 
     std::function<void(Request &)> callback;
 
-    const char *delimiter;
+    bool delimiter_is_comma = false;
 
 public:
     void init() override {
@@ -53,16 +53,18 @@ public:
                                         .desc("Delimiter to decode the trace file")
                                         .default_val(" ");
 
-        assert(delimiter_str.length() == 1);
-
         m_clock_ratio = param<uint>("clock_ratio").required();
 
-        delimiter = delimiter_str.c_str();
+        assert(delimiter_str.length() == 1);
+        if (delimiter_str == ",")
+            delimiter_is_comma = true;
+        else
+            assert(delimiter_str == " ");
 
         m_logger = Logging::create_logger("AiMTrace");
         if (use_trace_file_path)
             trace_path_str = trace_file_path;
-        m_logger->info("Opening trace file {} with delimeter \"{}\"...", trace_path_str, delimiter);
+        m_logger->info("Opening trace file {} with delimiter \"{}\"...", trace_path_str, delimiter_is_comma ? "," : " ");
         init_trace(trace_path_str);
         remaining_req = false;
         callback = std::bind(&AiMTrace::receive, this, std::placeholders::_1);
@@ -136,7 +138,10 @@ private:
                 continue;
             } else {
                 std::vector<std::string> tokens;
-                tokenize(tokens, line, delimiter);
+                if (delimiter_is_comma)
+                    tokenize(tokens, line, ",");
+                else
+                    tokenize(tokens, line, " ");
 
                 if (tokens.empty() == true) {
                     // It's an empty line
