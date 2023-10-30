@@ -1,9 +1,7 @@
 Frontend:
   impl: AiMTrace
   clock_ratio: 1
-  path: ./test/micro_macab_1024_16banks.csv
-  delimeter: ,
-
+  
   Translation:
     impl: NoTranslation
     max_addr: 2147483648

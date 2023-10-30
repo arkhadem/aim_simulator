@@ -20,6 +20,9 @@ std::map<Ramulator::Request::Type, std::string> Ramulator::AiMISRInfo::type_to_s
 std::map<std::string, Ramulator::Request::MemAccessRegion> Ramulator::AiMISRInfo::str_to_mem_access_region;
 std::map<Ramulator::Request::MemAccessRegion, std::string> Ramulator::AiMISRInfo::mem_access_region_to_str;
 
+std::string Ramulator::trace_file_path;
+bool Ramulator::use_trace_file_path;
+
 int main(int argc, char *argv[]) {
     Ramulator::AiMISRInfo::init();
 
@@ -28,6 +31,7 @@ int main(int argc, char *argv[]) {
     program.add_argument("-c", "--config").metavar("\"dumped YAML configuration\"").help("String dump of the yaml configuration.");
     program.add_argument("-f", "--config_file").metavar("path-to-configuration-file").help("Path to a YAML configuration file.");
     program.add_argument("-p", "--param").metavar("KEY=VALUE").append().help("Specify parameter to override in the configuration file. Repeat this option to change multiple parameters.");
+    program.add_argument("-t", "--trace_file").metavar("path-to-trace-file").help("Path to the trace file.");
 
     try {
         program.parse_args(argc, argv);
@@ -83,6 +87,11 @@ int main(int argc, char *argv[]) {
         config = YAML::Load(dumped_config);
     } else if (use_yaml_file) {
         config = Ramulator::Config::parse_config_file(config_file_path, params);
+    }
+
+    if (auto arg = program.present<std::string>("-t")) {
+        Ramulator::trace_file_path = *arg;
+        Ramulator::use_trace_file_path = true;
     }
 
     // Instaniate the frontend of the simulated system, this is one of the top-level objects in Ramulator 2.0.

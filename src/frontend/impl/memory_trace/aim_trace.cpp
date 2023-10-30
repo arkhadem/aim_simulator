@@ -41,15 +41,28 @@ private:
 
     std::function<void(Request &)> callback;
 
+    const char *delimiter;
+
 public:
     void init() override {
         std::string trace_path_str = param<std::string>("path")
                                          .desc("Path to the AiM host request trace file.")
-                                         .required();
+                                         .default_val(trace_file_path);
+
+        std::string delimiter_str = param<std::string>("delimiter")
+                                        .desc("Delimiter to decode the trace file")
+                                        .default_val(" ");
+
+        assert(delimiter_str.length() == 1);
+
         m_clock_ratio = param<uint>("clock_ratio").required();
 
+        delimiter = delimiter_str.c_str();
+
         m_logger = Logging::create_logger("AiMTrace");
-        m_logger->info("Opening trace file {} ...", trace_path_str);
+        if (use_trace_file_path)
+            trace_path_str = trace_file_path;
+        m_logger->info("Opening trace file {} with delimeter \"{}\"...", trace_path_str, delimiter);
         init_trace(trace_path_str);
         remaining_req = false;
         callback = std::bind(&AiMTrace::receive, this, std::placeholders::_1);
@@ -123,7 +136,7 @@ private:
                 continue;
             } else {
                 std::vector<std::string> tokens;
-                tokenize(tokens, line, ",");
+                tokenize(tokens, line, delimiter);
 
                 if (tokens.empty() == true) {
                     // It's an empty line

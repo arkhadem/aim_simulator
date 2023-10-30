@@ -10,6 +10,9 @@
 
 namespace Ramulator {
 
+extern std::string trace_file_path;
+extern bool use_trace_file_path;
+
 class IFrontEnd : public Clocked<IFrontEnd>, public TopLevel<IFrontEnd> {
     RAMULATOR_REGISTER_INTERFACE(IFrontEnd, "Frontend", "The frontend that drives the simulation.");
 
