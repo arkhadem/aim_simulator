@@ -87,7 +87,7 @@ struct Request {
     // whose bit is set in channel mask.
     // NOT USED in ISR_EWADD.
     // Channel mask must show 1 channel in ISR_WR_SBK and ISR_RD_SBK ISRs
-    int32_t channel_mask = -1;
+    int64_t channel_mask = -1;
 
     // This request will be sent to a specific bank. USED only in single-bank ISRs, i.e.,
     // ISR_WR_SBK, ISR_RD_SBK, ISR_COPY_BKGB, ISR_COPY_GBBK, ISR_MAC_SBK, and ISR_EWMUL
