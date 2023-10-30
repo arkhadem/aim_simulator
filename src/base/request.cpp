@@ -19,42 +19,56 @@ const char *Request::c_str() {
     char *name = new char[1024];
     if (type == Type::AIM) {
         req_stream << "Request[Type(" << AiMISRInfo::convert_AiM_opcode_to_str(opcode) << "), ";
-        req_stream << "Opsize(" << opsize << "), ";
-        req_stream << "GPR0(" << GPR_addr_0 << "), ";
-        req_stream << "GPR1(" << GPR_addr_1 << "), ";
-        req_stream << "CHMask(" << channel_mask << "), ";
-        req_stream << "BA(" << bank_index << "), ";
-        req_stream << "RO(" << row_addr << "), ";
-        req_stream << "CO(" << col_addr << "), ";
-        req_stream << "Tid(" << thread_index;
+        if (opsize != -1)
+            req_stream << "Opsize(" << opsize << "), ";
+        if (GPR_addr_0 != -1)
+            req_stream << "GPR0(" << GPR_addr_0 << "), ";
+        if (GPR_addr_1 != -1)
+            req_stream << "GPR1(" << GPR_addr_1 << "), ";
+        if (channel_mask != -1)
+            req_stream << "CHMask(" << channel_mask << "), ";
+        if (bank_index != -1)
+            req_stream << "BA(" << bank_index << "), ";
+        if (row_addr != -1)
+            req_stream << "RO(" << row_addr << "), ";
+        if (col_addr != -1)
+            req_stream << "CO(" << col_addr << "), ";
+        if (thread_index != -1)
+            req_stream << "Tid(" << thread_index << "), ";
     } else {
         if (type == Type::Read) {
             req_stream << "Request[Type(Read), Region(";
         } else if (type == Type::Write) {
-            req_stream << "Request[Type(Write), ";
+            req_stream << "Request[Type(Write), Region(";
         }
         if (mem_access_region == MemAccessRegion::MEM)
-            req_stream << "MEM";
+            req_stream << "MEM), ";
         else if (mem_access_region == MemAccessRegion::GPR)
-            req_stream << "GPR";
+            req_stream << "GPR), ";
         else
-            req_stream << "CFR";
+            req_stream << "CFR), ";
     }
     if (host_req_id != -1)
-        req_stream << "), hostID(" << host_req_id;
+        req_stream << "hostID(" << host_req_id << "), ";
     if (AiM_req_id != -1)
-        req_stream << "), AiMID(" << AiM_req_id;
+        req_stream << "AiMID(" << AiM_req_id << "), ";
     if (addr != -1)
-        req_stream << "), Address(0x" << std::hex << addr << std::dec;
+        req_stream << "Address(0x" << std::hex << addr << std::dec << "), ";
     if (addr_vec.size() != 0) {
-        req_stream << "), Address Vec(";
-        req_stream << "CH: " << addr_vec[0] << ", ";
-        req_stream << "BG: " << addr_vec[1] << ", ";
-        req_stream << "BA: " << addr_vec[2] << ", ";
-        req_stream << "RO: " << addr_vec[3] << ", ";
-        req_stream << "CO: " << addr_vec[4];
+        req_stream << "Address Vec(";
+        if (addr_vec[0] != -1)
+            req_stream << "CH: " << addr_vec[0] << ", ";
+        if (addr_vec[1] != -1)
+            req_stream << "BG: " << addr_vec[1] << ", ";
+        if (addr_vec[2] != -1)
+            req_stream << "BA: " << addr_vec[2] << ", ";
+        if (addr_vec[3] != -1)
+            req_stream << "RO: " << addr_vec[3] << ", ";
+        if (addr_vec[4] != -1)
+            req_stream << "CO: " << addr_vec[4] << "), ";
+        req_stream << "), ";
     }
-    req_stream << ")]";
+    req_stream << "]";
 
     strcpy(name, req_stream.str().c_str());
     return name;

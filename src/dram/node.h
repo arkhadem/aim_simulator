@@ -89,7 +89,6 @@ struct DRAMNodeBase {
     };
 
     void update_states(int command, const AddrVec_t &addr_vec, Clk_t clk) {
-        printf("level: %d\n", m_level);
         if (m_spec->m_actions[m_level][command]) {
             // update the state machine at this level
             m_spec->m_actions[m_level][command](static_cast<NodeType *>(this), command, addr_vec, clk);

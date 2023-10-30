@@ -50,6 +50,7 @@ public:
         m_dram = memory_system->get_ifce<IDRAM>();
         m_row_addr_idx = m_dram->m_levels("row");
         m_priority_buffer.max_size = 512 * 3 + 32;
+        m_logger = Logging::create_logger("AiMDRAMController[" + std::to_string(m_channel_id) + "]");
     };
 
     bool compare_addr_vec(Request req1, Request req2, int min_compared_level) {
@@ -152,7 +153,8 @@ public:
 
     void tick() override {
         m_clk++;
-        printf("[CH %d MC_CLK %ld]\n", m_channel_id, m_clk);
+        if ((m_clk == 1) || (m_clk % 1000 == 0))
+            m_logger->info("[CLK {}]", m_clk);
 
         // 1. Serve completed reads
         serve_completed_reads();
@@ -175,10 +177,10 @@ public:
                 req_it->depart = m_clk;
                 pending.push_back(*req_it);
                 buffer->remove(req_it);
-                printf("EOC ready for callback\n");
+                m_logger->info("[CLK {}] EOC ready for callback", m_clk);
             } else {
                 // If we find a real request to serve
-                printf("Issuing %s for %s\n", std::string(m_dram->m_commands(req_it->command)).c_str(), req_it->c_str());
+                m_logger->info("[CLK {}] Issuing {} for {}", m_clk, std::string(m_dram->m_commands(req_it->command)).c_str(), req_it->c_str());
 
                 m_dram->issue_command(req_it->command, req_it->addr_vec);
 
@@ -225,7 +227,7 @@ private:
                     // If the request comes from outside (e.g., processor), call its callback
                     req.callback(req);
                 } else {
-                    printf("Warning: %s doesn't have callback set but it is in the pending queue!\n", req.c_str());
+                    m_logger->info("[CLK {}] Warning: {} doesn't have callback set but it is in the pending queue!", m_clk, req.c_str());
                 }
                 // Finally, remove this request from the pending queue
                 pending.pop_front();

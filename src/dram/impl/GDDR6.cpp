@@ -170,7 +170,7 @@ public:
              7,    // nRTP (changed 6.25)
              6,    // nCWL
              1,    // nCCDS (changed from ISSCC)
-             6,    // nCCDL
+             1,    // nCCDL (based on Xavier's WRSBK and RDSBK profiling results)
              11,   // nRRDS
              11,   // nRRDL
              9,    // nWTRS
@@ -677,17 +677,17 @@ private:
                                       // CAS <-> CAS
                                       /// nCCDS is the minimal latency for column commands that access to a different bank group
                                       /// AiM commands that transfer data on the bus shared between BGs
-                                      /// RD: RDMAC16, RDAF16, and RDCP
+                                      /// RD: RDMAC16, RDAF16, MAC, MAC16, and RDCP
                                       /// WR: WRGB, WRMAC16, and WRCP
-                                      {.level = "channel", .preceding = {"RD", "RDA", "RDMAC16", "RDAF16", "RDCP"}, .following = {"RD", "RDA", "RDMAC16", "RDAF16", "RDCP"}, .latency = V("nCCDS")},
+                                      {.level = "channel", .preceding = {"RD", "RDA", "RDMAC16", "RDAF16", "MAC", "MAC16", "RDCP"}, .following = {"RD", "RDA", "RDMAC16", "RDAF16", "MAC", "MAC16", "RDCP"}, .latency = V("nCCDS")},
                                       {.level = "channel", .preceding = {"WR", "WRA", "WRGB", "WRMAC16", "WRCP"}, .following = {"WR", "WRA", "WRGB", "WRMAC16", "WRCP"}, .latency = V("nCCDS")},
 
                                       /// nCCDL is the minimal latency for column commands that access to the same bank group
                                       /// AiM commands that transfer data on the bus shared inside a BG
-                                      /// RD: RDMAC16, RDAF16, and RDCP
+                                      /// RD: RDMAC16, RDAF16, MAC, MAC16, and RDCP
                                       /// WR: WRMAC16, and WRCP
-                                      {.level = "channel", .preceding = {"RD", "RDA", "RDMAC16", "RDAF16", "RDCP"}, .following = {"RDMAC16", "RDAF16"}, .latency = V("nCCDL")},
-                                      {.level = "channel", .preceding = {"RDMAC16", "RDAF16"}, .following = {"RD", "RDA", "RDMAC16", "RDAF16", "RDCP"}, .latency = V("nCCDL")},
+                                      {.level = "channel", .preceding = {"RD", "RDA", "RDMAC16", "RDAF16", "MAC", "MAC16", "RDCP"}, .following = {"RDMAC16", "RDAF16", "MAC16"}, .latency = V("nCCDL")},
+                                      {.level = "channel", .preceding = {"RDMAC16", "RDAF16", "MAC16"}, .following = {"RD", "RDA", "RDMAC16", "RDAF16", "MAC", "MAC16", "RDCP"}, .latency = V("nCCDL")},
                                       {.level = "channel", .preceding = {"WR", "WRA", "WRMAC16", "WRCP"}, .following = {"WRMAC16"}, .latency = V("nCCDL")},
                                       {.level = "channel", .preceding = {"WRMAC16"}, .following = {"WR", "WRA", "WRMAC16", "WRCP"}, .latency = V("nCCDL")},
 
@@ -780,9 +780,9 @@ private:
                                       /// CAS <-> CAS
                                       /// nCCDL is the minimal latency for column commands that access to the same bank group
                                       /// AiM commands that transfer data on the bus shared inside a BG
-                                      /// RD: RDCP
+                                      /// RD: MAC and RDCP
                                       /// WR: WRCP
-                                      {.level = "bankgroup", .preceding = {"RD", "RDA", "RDCP"}, .following = {"RD", "RDA", "RDCP"}, .latency = V("nCCDL")},
+                                      {.level = "bankgroup", .preceding = {"RD", "RDA", "MAC", "RDCP"}, .following = {"RD", "RDA", "MAC", "RDCP"}, .latency = V("nCCDL")},
                                       {.level = "bankgroup", .preceding = {"WR", "WRA", "WRCP"}, .following = {"WR", "WRA", "WRCP"}, .latency = V("nCCDL")},
 
                                       /// WR <-> RD

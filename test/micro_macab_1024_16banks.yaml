@@ -1,0 +1,31 @@
+Frontend:
+  impl: AiMTrace
+  clock_ratio: 1
+  path: ./test/micro_macab_1024_16banks.csv
+
+  Translation:
+    impl: NoTranslation
+    max_addr: 2147483648
+              
+
+MemorySystem:
+  impl: AiMDRAM
+  clock_ratio: 1
+
+  DRAM:
+    impl: GDDR6
+    org:
+      preset: GDDR6_AiM_org
+    timing:
+      preset: GDDR6_AiM_timing 
+
+  Controller:
+    impl: AiM
+    Scheduler:
+      impl: FRFCFS
+    RefreshManager:
+      impl: AllBank
+    plugins:
+
+  AddrMapper:
+    impl: RoBaRaCoCh

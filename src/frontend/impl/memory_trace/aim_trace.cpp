@@ -25,7 +25,7 @@ class AiMTrace : public IFrontEnd,
 private:
     std::vector<Request> m_trace;
 
-    size_t m_curr_trace_idx = 0;
+    int m_curr_trace_idx = 0;
 
     bool m_trace_reached_EOC = false;
     bool m_trace_reached_calledback = false;
@@ -120,7 +120,6 @@ private:
                 throw ConfigurationError("Trace: EOF reached while EOC not reached (trace does not have EOC host request)!");
             } else if (line.empty()) {
                 // It's a white space
-                m_curr_trace_idx++;
                 continue;
             } else {
                 std::vector<std::string> tokens;
@@ -134,24 +133,36 @@ private:
                     // It's a comment
                     continue;
                 } else {
-
                     req.host_req_id = host_req_id++;
 
                     int token_idx = 0;
 
-                    for (auto token : tokens) {
-                        printf("\"%s\" ", token.c_str());
-                    }
-                    printf("\n");
+                    // printf("#%d:", m_curr_trace_idx);
+                    // for (auto token : tokens) {
+                    //     printf("\"%s\" ", token.c_str());
+                    // }
+                    // printf("\n");
 
-                    // Decoding trace type
+                    // Decoding traxce type
                     req.type = AiMISRInfo::convert_str_to_type(tokens[token_idx++]);
                     req.type_id = (int)req.type;
 
                     if (req.type == Request::Type::AIM) {
 
                         // Decoding opcode
-                        AiMISR aim_request = AiMISRInfo::convert_opcode_str_to_AiM_ISR(tokens[token_idx++]);
+                        std::string ISR_opcode = tokens[token_idx++];
+                        std::string prefix = "ISR_";
+                        if (std::mismatch(prefix.begin(), prefix.end(), ISR_opcode.begin()).first != prefix.end())
+                            ISR_opcode = prefix + ISR_opcode;
+                        AiMISR aim_request = AiMISRInfo::convert_opcode_str_to_AiM_ISR(ISR_opcode);
+
+                        if (aim_request.legal_fields.size() != tokens.size() - 2) {
+                            throw ConfigurationError("Trace: aim request {} requires {} fields, but {} is specified in line: \n{}!",
+                                                     AiMISRInfo::convert_AiM_opcode_to_str(aim_request.opcode),
+                                                     aim_request.legal_fields.size(),
+                                                     tokens.size() - 2,
+                                                     line);
+                        }
 
                         req.opcode = aim_request.opcode;
 
@@ -163,14 +174,19 @@ private:
     DECODE_AND_SET_FIELD(name)          \
     aim_request.is_field_value_legal<decltype(req.name)>(AiMISR::Field::name, req.name);
 
-                        DECODE_AIM_HOST_REQ_FIELD(opsize)
-                        DECODE_AIM_HOST_REQ_FIELD(GPR_addr_0)
-                        DECODE_AIM_HOST_REQ_FIELD(GPR_addr_1)
-                        DECODE_AIM_HOST_REQ_FIELD(channel_mask)
-                        DECODE_AIM_HOST_REQ_FIELD(bank_index)
-                        DECODE_AIM_HOST_REQ_FIELD(row_addr)
-                        DECODE_AIM_HOST_REQ_FIELD(col_addr)
-                        DECODE_AIM_HOST_REQ_FIELD(thread_index)
+#define DECODE_AIM_HOST_REQ_FIELD_IF_NEEDED(name)          \
+    if (aim_request.is_field_legal(AiMISR::Field::name)) { \
+        DECODE_AIM_HOST_REQ_FIELD(name)                    \
+    }
+
+                        DECODE_AIM_HOST_REQ_FIELD_IF_NEEDED(opsize)
+                        DECODE_AIM_HOST_REQ_FIELD_IF_NEEDED(GPR_addr_0)
+                        DECODE_AIM_HOST_REQ_FIELD_IF_NEEDED(GPR_addr_1)
+                        DECODE_AIM_HOST_REQ_FIELD_IF_NEEDED(channel_mask)
+                        DECODE_AIM_HOST_REQ_FIELD_IF_NEEDED(bank_index)
+                        DECODE_AIM_HOST_REQ_FIELD_IF_NEEDED(row_addr)
+                        DECODE_AIM_HOST_REQ_FIELD_IF_NEEDED(col_addr)
+                        DECODE_AIM_HOST_REQ_FIELD_IF_NEEDED(thread_index)
 
                         if (req.opcode == Request::Opcode::ISR_EOC) {
                             m_trace_reached_EOC = true;
@@ -182,17 +198,15 @@ private:
                         // Decoding opcode
                         req.mem_access_region = AiMISRInfo::convert_str_to_mem_access_region(tokens[token_idx++]);
 
-                        DECODE_AND_SET_FIELD(addr)
-                        DECODE_AND_SET_FIELD(data)
-
                         if (req.mem_access_region == Request::MemAccessRegion::CFR) {
-                            if (req.data == -1) {
-                                throw ConfigurationError("Trace: CFR value not determined!");
-                            }
+                            DECODE_AND_SET_FIELD(addr)
+                            DECODE_AND_SET_FIELD(data)
+                        } else if (req.mem_access_region == Request::MemAccessRegion::GPR) {
+                            DECODE_AND_SET_FIELD(addr)
                         } else {
-                            if (req.data != -1) {
-                                throw ConfigurationError("Trace: GPR/MEM value must be -1!");
-                            }
+                            DECODE_AND_SET_FIELD(channel_mask)
+                            DECODE_AND_SET_FIELD(bank_index)
+                            DECODE_AND_SET_FIELD(row_addr)
                         }
                     }
                 }

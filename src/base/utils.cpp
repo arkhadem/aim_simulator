@@ -69,6 +69,7 @@ void tokenize(std::vector<std::string> &tokens, std::string line, std::string de
         last_pos = pos + 1;
     }
     std::string token = line.substr(last_pos);
+    token.erase(std::remove_if(token.begin(), token.end(), ::isspace), token.end());
     if (token != "")
         tokens.push_back(token);
 }
