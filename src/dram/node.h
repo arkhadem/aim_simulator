@@ -159,7 +159,6 @@ struct DRAMNodeBase {
     };
 
     int get_preq_command(int command, const AddrVec_t &addr_vec, Clk_t m_clk) {
-        int child_id = addr_vec[m_level + 1];
         if (m_spec->m_preqs[m_level][command]) {
             int preq_cmd = m_spec->m_preqs[m_level][command](static_cast<NodeType *>(this), command, addr_vec, m_clk);
             if (preq_cmd != -1) {
@@ -168,12 +167,13 @@ struct DRAMNodeBase {
             }
         }
 
-        if (child_id < 0 || !m_child_nodes.size()) {
-            // stop recursion: there were no prequisites at any level
-            return command;
+        if (m_level == m_spec->m_command_scopes[command] || !m_child_nodes.size()) {
+            // stop recursion: the check passed at all levels
+            return true;
         }
 
         // recursively get_preq_command at my child
+        int child_id = addr_vec[m_level + 1];
         return m_child_nodes[child_id]->get_preq_command(command, addr_vec, m_clk);
     };
 
@@ -183,28 +183,28 @@ struct DRAMNodeBase {
             return false;
         }
 
-        int child_id = addr_vec[m_level + 1];
-        if (child_id < 0 || m_level == m_spec->m_command_scopes[command] || !m_child_nodes.size()) {
+        if (m_level == m_spec->m_command_scopes[command] || !m_child_nodes.size()) {
             // stop recursion: the check passed at all levels
             return true;
         }
 
         // recursively check my child
+        int child_id = addr_vec[m_level + 1];
         return m_child_nodes[child_id]->check_ready(command, addr_vec, clk);
     };
 
     bool check_rowbuffer_hit(int command, const AddrVec_t &addr_vec, Clk_t m_clk) {
         assert(false); // Not implemented
-        // TODO: Optimize this by just checking the bank-levels? Have a dedicated bank structure?
         int child_id = addr_vec[m_level + 1];
+        // TODO: Optimize this by just checking the bank-levels? Have a dedicated bank structure?
         if (m_spec->m_rowhits[m_level][command]) {
             // stop recursion: there is a row hit at this level
             return m_spec->m_rowhits[m_level][command](static_cast<NodeType *>(this), command, child_id, m_clk);
         }
 
-        if (child_id < 0 || !m_child_nodes.size()) {
-            // stop recursion: there were no row hits at any level
-            return false;
+        if (m_level == m_spec->m_command_scopes[command] || !m_child_nodes.size()) {
+            // stop recursion: the check passed at all levels
+            return true;
         }
 
         // recursively check for row hits at my child
