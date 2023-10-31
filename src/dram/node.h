@@ -167,7 +167,7 @@ struct DRAMNodeBase {
             }
         }
 
-        if (m_level == m_spec->m_command_scopes[command] || !m_child_nodes.size()) {
+        if (!m_child_nodes.size()) {
             // stop recursion: the check passed at all levels
             return true;
         }
