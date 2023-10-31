@@ -99,6 +99,12 @@ struct DRAMNodeBase {
         }
         // recursively update child nodes
         int child_id = addr_vec[m_level + 1];
+
+        if (child_id < 0) {
+            // stop recursion: there were no prequisites at any level
+            return;
+        }
+
         m_child_nodes[child_id]->update_states(command, addr_vec, clk);
     };
 
@@ -159,10 +165,10 @@ struct DRAMNodeBase {
     };
 
     int get_preq_command(int command, const AddrVec_t &addr_vec, Clk_t m_clk) {
-        printf("Command: %d\n", command);
-        printf("m_level: %d\n", m_level);
-        printf("size[%d]\n", m_spec->m_preqs.size());
-        printf("size[%d][%d]\n", m_spec->m_preqs[m_level].size());
+        // printf("Command: %d\n", command);
+        // printf("m_level: %d\n", m_level);
+        // printf("size[%d]\n", m_spec->m_preqs.size());
+        // printf("size[%d][%d]\n", m_spec->m_preqs.size(), m_spec->m_preqs[m_level].size());
         if (m_spec->m_preqs[m_level][command]) {
             int preq_cmd = m_spec->m_preqs[m_level][command](static_cast<NodeType *>(this), command, addr_vec, m_clk);
             if (preq_cmd != -1) {
@@ -176,8 +182,14 @@ struct DRAMNodeBase {
             return true;
         }
 
-        // recursively get_preq_command at my child
         int child_id = addr_vec[m_level + 1];
+
+        if (child_id < 0) {
+            // stop recursion: there were no prequisites at any level
+            return command;
+        }
+
+        // recursively get_preq_command at my child
         return m_child_nodes[child_id]->get_preq_command(command, addr_vec, m_clk);
     };
 
@@ -194,6 +206,12 @@ struct DRAMNodeBase {
 
         // recursively check my child
         int child_id = addr_vec[m_level + 1];
+
+        if (child_id < 0) {
+            // stop recursion: there were no prequisites at any level
+            return command;
+        }
+
         return m_child_nodes[child_id]->check_ready(command, addr_vec, clk);
     };
 
