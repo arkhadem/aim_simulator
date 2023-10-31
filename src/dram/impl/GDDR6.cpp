@@ -809,6 +809,9 @@ private:
                                       // "A minimum time tRREFD is required between a  REFpb command and an ACTIVATE command to a different bank"
                                       {.level = "channel", .preceding = {"REFpb"}, .following = {"ACT", "ACT4", "ACT16"}, .latency = V("nRREFD")},
 
+                                      {.level = "channel", .preceding = {"PREA"}, .following = {"PRE", "PRE4", "PREA"}, .latency = V("nRP")},
+                                      {.level = "channel", .preceding = {"PRE", "PRE4"}, .following = {"PREA"}, .latency = V("nRP")},
+
                                       /****************************************************** Bank Group ******************************************************/
                                       /// CAS <-> CAS
                                       /// nCCDL is the minimal latency for column commands that access to the same bank group
@@ -861,6 +864,9 @@ private:
                                       // "An ACTIVATE (ACT) command is required to be issued before the WRITE command to the same bank, and tRCDWR must be met."
                                       {.level = "bankgroup", .preceding = {"ACT4"}, .following = {"WR", "WRA", "WRCP"}, .latency = V("nRCDWR")},
 
+                                      {.level = "channel", .preceding = {"PRE4"}, .following = {"PRE", "PRE4"}, .latency = V("nRP")},
+                                      {.level = "channel", .preceding = {"PRE"}, .following = {"PRE4"}, .latency = V("nRP")},
+
                                       /****************************************************** Bank ******************************************************/
                                       /// CAS <-> RAS
                                       // "An ACTIVATE (ACT) command is required to be issued before the READ command to the same bank, and tRCDRD must be met."
@@ -885,6 +891,8 @@ private:
                                       {.level = "bank", .preceding = {"WRA"}, .following = {"REFpb"}, .latency = V("nCWL") + V("nBL") + V("nWR") + V("nRP")},
                                       // "A minimum time tRFCpb is required between a REFpb command and an access command to the same bank that follows"
                                       {.level = "bank", .preceding = {"REFpb"}, .following = {"ACT"}, .latency = V("nRFCpb")},
+
+                                      {.level = "channel", .preceding = {"PRE"}, .following = {"PRE"}, .latency = V("nRP")},
 
                                   });
 #undef V
