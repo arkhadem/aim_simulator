@@ -224,7 +224,8 @@ public:
                     case Request::Opcode::ISR_MAC_SBK:
                     case Request::Opcode::ISR_MAC_ABK:
                     case Request::Opcode::ISR_AF:
-                    case Request::Opcode::ISR_EWMUL: {
+                    case Request::Opcode::ISR_EWMUL:
+                    case Request::Opcode::ISR_WR_ABK: {
                         // Decoding opcode
                         AiMISR aim_ISR = AiMISRInfo::convert_AiM_opcode_to_AiM_ISR(opcode);
 

@@ -159,15 +159,15 @@ public:
         {"GDDR6_AiM_timing", // name
          {
              2000, // rate
-             2,    // nBL (changed 1.25)
+             1,    // nBL (changed 1.25)
              25,   // nCL (changed)
              18,   // nRCDRD (changed)
              14,   // nRCDWR (changed)
              16,   // nRP (changed)
-             60,   // nRAS
-             89,   // nRC
+             27,   // nRAS (changed from SIM: RDSBK (opsize=1) = ACT + RD + PRE = nRAS + nRP = nRAS + 16 = 43)
+             89,   // nRC (not imported, used only for precharge)
              17,   // nWR (changed 16.625)
-             7,    // nRTP (changed 6.25)
+             6,    // nRTP (changed 6.25)
              6,    // nCWL
              1,    // nCCDS (changed from ISSCC)
              1,    // nCCDL (based on Xavier's WRSBK and RDSBK profiling results)
@@ -229,6 +229,7 @@ public:
         "RDMAC16",
         "RDAF16",
         "WRMAC16",
+        "WRA16",
         "EOC",
         "UNKNOWN"};
 
@@ -256,6 +257,7 @@ public:
                                   {"RDMAC16", "channel"},
                                   {"RDAF16", "channel"},
                                   {"WRMAC16", "channel"},
+                                  {"WRA16", "channel"},
                                   {"EOC", "channel"},
                               });
 
@@ -284,6 +286,7 @@ public:
                         {"RDMAC16", {false, false, false, false}},
                         {"RDAF16", {false, false, false, false}},
                         {"WRMAC16", {false, false, false, false}},
+                        {"WRA16", {false, true, true, false}},
                         {"EOC", {false, false, false, false}},
                     });
 
@@ -309,6 +312,7 @@ public:
         "ISR_AF",
         "ISR_EWMUL",
         "ISR_EWADD",
+        "ISR_WR_ABK",
         "ISR_EOC",
         "MAX"};
 
@@ -337,6 +341,7 @@ public:
                                         {"ISR_AF", "AF16"},          // 12 - AF16 all banks
                                         {"ISR_EWMUL", "EWMUL16"},    // 14 - EWMUL16 all banks or 1 bank group
                                         {"ISR_EWADD", "UNKNOWN"},    // 15 - Unknown and illegal
+                                        {"ISR_WR_ABK", "WRA16"},     // 1 - Write single bank
                                         {"ISR_EOC", "EOC"},          // 16 - Unknown and illegal
                                         {"MAX", "UNKNOWN"},          // 17 - Unknown and illegal
                                     });
@@ -493,6 +498,7 @@ private:
 
     void set_timing_vals() {
         m_timing_vals.resize(m_timings.size(), -1);
+        m_command_latencies.resize(m_commands.size(), -1);
 
         // Load timing preset if provided
         bool preset_provided = false;
@@ -609,9 +615,6 @@ private:
             }
         }
 
-        // Set read latency
-        m_read_latency = m_timing_vals("nCL") + m_timing_vals("nBL");
-
         // AiM related timings
 
         /* CAS (RD) */
@@ -660,8 +663,29 @@ private:
         printf("nWPRE: %d\n", m_timing_vals("nWPRE"));
         printf("-------------------------------------------------------\n");
 
+        int total_banks = m_organization.count[m_levels["bankgroup"]] * m_organization.count[m_levels["bank"]];
+
+        // Set read latency
+        m_read_latency = m_timing_vals("nCL") + m_timing_vals("nBL");
+        m_command_latencies("WR") = m_timing_vals("nCWL") + m_timing_vals("nBL");
+        m_command_latencies("WRGB") = m_timing_vals("nCWLGB") + m_timing_vals("nBL");
+        m_command_latencies("WRMAC16") = m_timing_vals("nCWLREG") + m_timing_vals("nBL");
+        m_command_latencies("RDMAC16") = m_timing_vals("nCLREG") + m_timing_vals("nBL");
+        m_command_latencies("RDAF16") = m_timing_vals("nCLREG") + m_timing_vals("nBL");
+        m_command_latencies("RD") = m_timing_vals("nCL") + m_timing_vals("nBL");
+        m_command_latencies("RDCP") = 1;
+        m_command_latencies("WRCP") = 1;
+        m_command_latencies("MAC") = 1;
+        m_command_latencies("MAC16") = 1;
+        m_command_latencies("AF16") = 1;
+        m_command_latencies("EWMUL16") = 1;
+        m_command_latencies("WRA16") = m_timing_vals("nCWL") + (total_banks - 1) * m_timing_vals("nCCDL") + m_timing_vals("nRP");
+        m_command_latencies("EOC") = 1;
+
 // Populate the timing constraints
 #define V(timing) (m_timing_vals(timing))
+        int nCWL16_S = V("nCWL") + (total_banks - 1) * V("nCCDS");
+        int nCWL16_L = V("nCWL") + (total_banks - 1) * V("nCCDL");
         populate_timingcons(this, {
                                       /****************************************************** Channel ******************************************************/
                                       // CAS <-> CAS
@@ -670,7 +694,7 @@ private:
                                       /// RD: RDMAC16 and RDAF16
                                       /// WR: WRGB and WRMAC16
                                       {.level = "channel", .preceding = {"RD", "RDA", "RDMAC16", "RDAF16"}, .following = {"RD", "RDA", "RDMAC16", "RDAF16"}, .latency = V("nBL")},
-                                      {.level = "channel", .preceding = {"WR", "WRA", "WRGB", "WRMAC16"}, .following = {"WR", "WRA", "WRGB", "WRMAC16"}, .latency = V("nBL")},
+                                      {.level = "channel", .preceding = {"WR", "WRA", "WRA16", "WRGB", "WRMAC16"}, .following = {"WR", "WRA", "WRA16", "WRGB", "WRMAC16"}, .latency = V("nBL")},
 
                                       /*** Rank (or different BankGroup) ***/
 
@@ -679,8 +703,11 @@ private:
                                       /// AiM commands that transfer data on the bus shared between BGs
                                       /// RD: RDMAC16, RDAF16, MAC, MAC16, and RDCP
                                       /// WR: WRGB, WRMAC16, and WRCP
-                                      {.level = "channel", .preceding = {"RD", "RDA", "RDMAC16", "RDAF16", "MAC", "MAC16", "RDCP"}, .following = {"RD", "RDA", "RDMAC16", "RDAF16", "MAC", "MAC16", "RDCP"}, .latency = V("nCCDS")},
-                                      {.level = "channel", .preceding = {"WR", "WRA", "WRGB", "WRMAC16", "WRCP"}, .following = {"WR", "WRA", "WRGB", "WRMAC16", "WRCP"}, .latency = V("nCCDS")},
+                                      {.level = "channel", .preceding = {"RD", "RDA", "MAC", "MAC16", "RDCP"}, .following = {"RD", "RDA", "MAC", "MAC16", "RDCP", "RDMAC16", "RDAF16"}, .latency = V("nCCDS")},
+                                      {.level = "channel", .preceding = {"RDMAC16", "RDAF16"}, .following = {"RD", "RDA", "MAC", "MAC16", "RDCP", "RDMAC16", "RDAF16"}, .latency = total_banks * V("nCCDS")},
+
+                                      {.level = "channel", .preceding = {"WR", "WRA", "WRGB", "WRCP"}, .following = {"WR", "WRA", "WRA16", "WRGB", "WRCP", "WRMAC16"}, .latency = V("nCCDS")},
+                                      {.level = "channel", .preceding = {"WRMAC16", "WRA16"}, .following = {"WR", "WRA", "WRA16", "WRGB", "WRCP", "WRMAC16"}, .latency = total_banks * V("nCCDS")},
 
                                       /// nCCDL is the minimal latency for column commands that access to the same bank group
                                       /// AiM commands that transfer data on the bus shared inside a BG
@@ -688,8 +715,8 @@ private:
                                       /// WR: WRMAC16, and WRCP
                                       {.level = "channel", .preceding = {"RD", "RDA", "RDMAC16", "RDAF16", "MAC", "MAC16", "RDCP"}, .following = {"RDMAC16", "RDAF16", "MAC16"}, .latency = V("nCCDL")},
                                       {.level = "channel", .preceding = {"RDMAC16", "RDAF16", "MAC16"}, .following = {"RD", "RDA", "RDMAC16", "RDAF16", "MAC", "MAC16", "RDCP"}, .latency = V("nCCDL")},
-                                      {.level = "channel", .preceding = {"WR", "WRA", "WRMAC16", "WRCP"}, .following = {"WRMAC16"}, .latency = V("nCCDL")},
-                                      {.level = "channel", .preceding = {"WRMAC16"}, .following = {"WR", "WRA", "WRMAC16", "WRCP"}, .latency = V("nCCDL")},
+                                      {.level = "channel", .preceding = {"WR", "WRA", "WRA16", "WRMAC16", "WRCP"}, .following = {"WRMAC16", "WRA16"}, .latency = V("nCCDL")},
+                                      {.level = "channel", .preceding = {"WRMAC16", "WRA16"}, .following = {"WR", "WRA", "WRA16", "WRMAC16", "WRCP"}, .latency = V("nCCDL")},
 
                                       /// RD <-> WR
                                       /// Minimum Read to Write (READ or RDTR to WRITE or WRTR command delay)
@@ -698,29 +725,31 @@ private:
                                       /// WR: WRGB and WRMAC16
                                       /// The next timing is tRTW
                                       {.level = "channel", .preceding = {"RD", "RDA"}, .following = {"WR", "WRA"}, .latency = V("nCL") + V("nBL") + 3 - V("nCWL") + V("nWPRE")},
-                                      {.level = "channel", .preceding = {"RDMAC16", "RDAF16"}, .following = {"WR", "WRA"}, .latency = V("nCLREG") + V("nBL") + 3 - V("nCWL") + V("nWPRE")},
+                                      {.level = "channel", .preceding = {"RD", "RDA"}, .following = {"WRA16"}, .latency = V("nCL") + V("nBL") + 3 - nCWL16_S + V("nWPRE")},
+                                      {.level = "channel", .preceding = {"RDMAC16", "RDAF16"}, .following = {"WR", "WRA"}, .latency = total_banks * V("nCLREG") + V("nBL") + 3 - V("nCWL") + V("nWPRE")},
+                                      {.level = "channel", .preceding = {"RDMAC16", "RDAF16"}, .following = {"WRA16"}, .latency = total_banks * V("nCLREG") + V("nBL") + 3 - nCWL16_S + V("nWPRE")},
                                       {.level = "channel", .preceding = {"RD", "RDA"}, .following = {"WRGB", "WRMAC16"}, .latency = V("nCL") + V("nBL") + 3 - V("nCWLREG") + V("nWPRE")},
-                                      {.level = "channel", .preceding = {"RDMAC16", "RDAF16"}, .following = {"WRGB", "WRMAC16"}, .latency = V("nCLREG") + V("nBL") + 3 - V("nCWLREG") + V("nWPRE")},
+                                      {.level = "channel", .preceding = {"RDMAC16", "RDAF16"}, .following = {"WRGB", "WRMAC16"}, .latency = total_banks * V("nCLREG") + V("nBL") + 3 - V("nCWLREG") + V("nWPRE")},
 
                                       /// WR <-> RD
                                       /// Minimum Read after Write
                                       /// AiM commands that transfer data on the external bus, based on the bus shared between BGs
                                       /// RD: RDMAC16 and RDAF16
                                       /// WR: WRGB and WRMAC16
-                                      {.level = "channel", .preceding = {"WR", "WRA"}, .following = {"RD", "RDA"}, .latency = V("nCWL") + V("nBL") + V("nWTRS")},
-                                      {.level = "channel", .preceding = {"WR", "WRA"}, .following = {"RDMAC16", "RDAF16"}, .latency = V("nCWL") + V("nBL") + V("nWTRS")},
-                                      {.level = "channel", .preceding = {"WRGB", "WRMAC16"}, .following = {"RD", "RDA"}, .latency = V("nCWLREG") + V("nBL") + V("nWTRS")},
-                                      {.level = "channel", .preceding = {"WRGB", "WRMAC16"}, .following = {"RDMAC16", "RDAF16"}, .latency = V("nCWLREG") + V("nBL") + V("nWTRS")},
+                                      {.level = "channel", .preceding = {"WR", "WRA"}, .following = {"RD", "RDA", "RDMAC16", "RDAF16"}, .latency = V("nCWL") + V("nBL") + V("nWTRS")},
+                                      {.level = "channel", .preceding = {"WRA16"}, .following = {"RD", "RDA", "RDMAC16", "RDAF16"}, .latency = nCWL16_S + V("nBL") + V("nWTRS")},
+                                      {.level = "channel", .preceding = {"WRGB"}, .following = {"RD", "RDA", "RDMAC16", "RDAF16"}, .latency = V("nCWLREG") + V("nBL") + V("nWTRS")},
+                                      {.level = "channel", .preceding = {"WRMAC16"}, .following = {"RD", "RDA", "RDMAC16", "RDAF16"}, .latency = total_banks * V("nCWLREG") + V("nBL") + V("nWTRS")},
 
                                       /// AiM commands that transfer data on the external bus, based on the bus shared inside a BG
                                       /// RD: RDMAC16 and RDAF16
                                       /// WR: WRMAC16
                                       {.level = "channel", .preceding = {"WR", "WRA"}, .following = {"RDMAC16", "RDAF16"}, .latency = V("nCWL") + V("nBL") + V("nWTRL")},
-                                      {.level = "channel", .preceding = {"WRMAC16"}, .following = {"RD", "RDA"}, .latency = V("nCWLREG") + V("nBL") + V("nWTRL")},
-                                      {.level = "channel", .preceding = {"WRMAC16"}, .following = {"RDMAC16", "RDAF16"}, .latency = V("nCWLREG") + V("nBL") + V("nWTRL")},
+                                      {.level = "channel", .preceding = {"WRA16"}, .following = {"RD", "RDA", "RDMAC16", "RDAF16"}, .latency = nCWL16_L + V("nBL") + V("nWTRL")},
+                                      {.level = "channel", .preceding = {"WRMAC16"}, .following = {"RD", "RDA", "RDMAC16", "RDAF16"}, .latency = total_banks * V("nCWLREG") + V("nBL") + V("nWTRL")},
 
                                       // What about the contention of the bus shared between BGs for:
-                                      // ("RDCP" -> {"WR", "WRA", "WRGB", "WRMAC16"}) IDK. There is no internal READ to WRITE delay.
+                                      // ("RDCP" -> {"WR", "WRA", "WRA16", "WRGB", "WRMAC16"}) IDK. There is no internal READ to WRITE delay.
                                       // ("WRCP" -> {"RD", "RDA", "RDMAC16", "RDAF16"}) my guess is V("nWTRS")
                                       // ("RDCP" <-> "WRCP") IDK. There is no internal READ to WRITE delay.
 
@@ -753,8 +782,11 @@ private:
                                       {.level = "channel", .preceding = {"ACT", "ACT4", "ACT16"}, .following = {"MAC16", "AF16", "EWMUL16"}, .latency = V("nRCDRD")},
                                       {.level = "channel", .preceding = {"ACT16"}, .following = {"RD", "RDA", "RDCP", "MAC", "MAC16", "AF16", "EWMUL16"}, .latency = V("nRCDRD")},
                                       // "An ACTIVATE (ACT) command is required to be issued before the WRITE command to the same bank, and tRCDWR must be met."
-                                      {.level = "channel", .preceding = {"ACT", "ACT4", "ACT16"}, .following = {"EWMUL16"}, .latency = V("nRCDWR")},
+                                      {.level = "channel", .preceding = {"ACT", "ACT4", "ACT16"}, .following = {"EWMUL16", "WRA16"}, .latency = V("nRCDWR")},
                                       {.level = "channel", .preceding = {"ACT16"}, .following = {"WR", "WRA", "WRCP", "EWMUL16"}, .latency = V("nRCDWR")},
+                                      {.level = "channel", .preceding = {"RDA"}, .following = {"ACT16"}, .latency = V("nRTP") + V("nRP")},
+                                      {.level = "channel", .preceding = {"WRA"}, .following = {"ACT16"}, .latency = V("nCWL") + V("nBL") + V("nWR") + V("nRP")},
+                                      {.level = "channel", .preceding = {"WRA16"}, .following = {"ACT", "ACT4", "ACT16"}, .latency = nCWL16_L + V("nBL") + V("nWR") + V("nRP")},
 
                                       /// RAS <-> REF
                                       // "All banks must be precharged prior to the REFab command."
@@ -762,6 +794,7 @@ private:
                                       {.level = "channel", .preceding = {"PRE", "PRE4", "PREA"}, .following = {"REFab"}, .latency = V("nRP")},
                                       {.level = "channel", .preceding = {"RDA"}, .following = {"REFab"}, .latency = V("nRTP") + V("nRP")},
                                       {.level = "channel", .preceding = {"WRA"}, .following = {"REFab"}, .latency = V("nCWL") + V("nBL") + V("nWR") + V("nRP")},
+                                      {.level = "channel", .preceding = {"WRA16"}, .following = {"REFpb", "REFab"}, .latency = V("nCWL") + V("nBL") + total_banks * V("nWR") + V("nRP")},
                                       // "A minimum time tRFCab is required between two REFab commands. The same rule applies to any access command after the refresh operation."
                                       {.level = "channel", .preceding = {"REFab"}, .following = {"ACT", "ACT4", "ACT16"}, .latency = V("nRFC")},
 
@@ -812,6 +845,8 @@ private:
                                       // "After the PRECHARGE command, a subsequent command to the same bank cannot be issued until tRP is met."
                                       {.level = "bankgroup", .preceding = {"PRE", "PRE4"}, .following = {"ACT4"}, .latency = V("nRP")},
                                       {.level = "bankgroup", .preceding = {"PRE4"}, .following = {"ACT"}, .latency = V("nRP")},
+                                      {.level = "bankgroup", .preceding = {"RDA"}, .following = {"ACT4"}, .latency = V("nRTP") + V("nRP")},
+                                      {.level = "bankgroup", .preceding = {"WRA"}, .following = {"ACT4"}, .latency = V("nCWL") + V("nBL") + V("nWR") + V("nRP")},
 
                                       /// RAS <-> REFpb
                                       // "The selected bank must be precharged prior to the REFpb command"
@@ -859,6 +894,7 @@ private:
         m_actions.resize(m_levels.size(), std::vector<ActionFunc_t<Node>>(m_commands.size()));
 
         // Channel Actions
+        m_actions[m_levels["channel"]][m_commands["WRA16"]] = Lambdas::Action::Channel::PREab<GDDR6>;
         m_actions[m_levels["channel"]][m_commands["PREA"]] = Lambdas::Action::Channel::PREab<GDDR6>;
         m_actions[m_levels["channel"]][m_commands["ACT16"]] = Lambdas::Action::Channel::ACTab<GDDR6>;
 
@@ -882,12 +918,15 @@ private:
         // Bank actions
         m_preqs[m_levels["bank"]][m_commands["RD"]] = Lambdas::Preq::Bank::RequireRowOpen<GDDR6>;
         m_preqs[m_levels["bank"]][m_commands["WR"]] = Lambdas::Preq::Bank::RequireRowOpen<GDDR6>;
+        m_preqs[m_levels["bank"]][m_commands["RDA"]] = Lambdas::Preq::Bank::RequireRowOpen<GDDR6>;
+        m_preqs[m_levels["bank"]][m_commands["WRA"]] = Lambdas::Preq::Bank::RequireRowOpen<GDDR6>;
         //m_preqs[m_levels["channel"]][m_commands["REFpb"]] = Lambdas::Preq::Bank::RequireAllBanksClosed<GDDR6>; // can RequireSameBanksClosed be used, or is RequireBankClosed needed?
 
         m_preqs[m_levels["bank"]][m_commands["RDCP"]] = Lambdas::Preq::Bank::RequireRowOpen<GDDR6>;
         m_preqs[m_levels["bank"]][m_commands["WRCP"]] = Lambdas::Preq::Bank::RequireRowOpen<GDDR6>;
         m_preqs[m_levels["bank"]][m_commands["MAC"]] = Lambdas::Preq::Bank::RequireRowOpen<GDDR6>;
 
+        m_preqs[m_levels["channel"]][m_commands["WRA16"]] = Lambdas::Preq::Channel::RequireAllRowsOpen<GDDR6>;
         m_preqs[m_levels["channel"]][m_commands["MAC16"]] = Lambdas::Preq::Channel::RequireAllRowsOpen<GDDR6>;
         m_preqs[m_levels["channel"]][m_commands["AF16"]] = Lambdas::Preq::Channel::RequireAllRowsOpen<GDDR6>;
         m_preqs[m_levels["channel"]][m_commands["EWMUL16"]] = Lambdas::Preq::Channel::RequireAllRowsOpen<GDDR6>;

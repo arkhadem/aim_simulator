@@ -55,8 +55,9 @@ struct Request {
         ISR_AF = 12,       // Perform Activation Function operation on [all banks]
         ISR_EWMUL = 13,    // Element wise multiplication between 2 banks of 1 or all bank group(s)
         ISR_EWADD = 14,    // Element wise multiplication between 2 GPR addresses
-        ISR_EOC = 15,      // End of compute for the current kernel
-        MAX = 16
+        ISR_WR_ABK = 15,   // Write [16 x 16 bits] from [GPR * 32] to [16 banks] of channel [#channel_address]
+        ISR_EOC = 16,      // End of compute for the current kernel
+        MAX = 17
         // ISR_WR_HBK,    // [NOT_IMPLEMENTED] Write data from [GPR] to [8 banks]
         // ISR_WR_ABK,    // [NOT_IMPLEMENTED] Write data from [GPR] to [all banks]
         // ISR_WR_GPR,    // [NOT_IMPLEMENTED] Write data from [host] to [GPR]
@@ -78,7 +79,7 @@ struct Request {
     // [NOT_IMPLEMENTED] Source of ISR_WR_GB is host (false) or GPR (true)
     // bool use_GPR = false;
 
-    // GPR address 0 USED for: ISR_WR_SBK, ISR_WR_GB, ISR_WR_BIAS, ISR_RD_MAC, ISR_EWADD
+    // GPR address 0 USED for: ISR_WR_SBK, ISR_WR_ABK, ISR_WR_GB, ISR_WR_BIAS, ISR_RD_MAC, ISR_EWADD
     // GPR address 1 USED for: ISR_EWADD
     Addr_t GPR_addr_0 = -1;
     Addr_t GPR_addr_1 = -1;
@@ -86,7 +87,7 @@ struct Request {
     // This request will be broadcasted/multicasted to the channels
     // whose bit is set in channel mask.
     // NOT USED in ISR_EWADD.
-    // Channel mask must show 1 channel in ISR_WR_SBK and ISR_RD_SBK ISRs
+    // Channel mask must show 1 channel in ISR_WR_SBK, ISR_WR_ABK, and ISR_RD_SBK ISRs
     int64_t channel_mask = -1;
 
     // This request will be sent to a specific bank. USED only in single-bank ISRs, i.e.,
@@ -209,6 +210,16 @@ public:
                                                       AiMISR::Field::GPR_addr_0,
                                                       AiMISR::Field::channel_mask,
                                                       AiMISR::Field::bank_index,
+                                                      AiMISR::Field::row_addr},
+                                                     true,    // channel_count_eq_one
+                                                     false,   // AiM_DMA_blocking
+                                                     "column" // target_level
+        );
+
+        aim_opcode_to_str[Request::Opcode::ISR_WR_ABK] = "ISR_WR_ABK";
+        opcode_str_to_aim_ISR["ISR_WR_ABK"] = AiMISR(Request::Opcode::ISR_WR_ABK,
+                                                     {AiMISR::Field::GPR_addr_0,
+                                                      AiMISR::Field::channel_mask,
                                                       AiMISR::Field::row_addr},
                                                      true,    // channel_count_eq_one
                                                      false,   // AiM_DMA_blocking

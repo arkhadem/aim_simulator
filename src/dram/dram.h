@@ -55,6 +55,7 @@ public:
     TimingCons m_timing_cons; // The actual timing constraints used by Ramulator's DRAM model
 
     Clk_t m_read_latency = -1; // Number of cycles needed between issuing RD command and receiving data.
+    SpecLUT<int> m_command_latencies{m_commands};
 
     /************************************************
    *          Device Behavior Interface

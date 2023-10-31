@@ -10,7 +10,8 @@ class AiMDRAMController final : public IDRAMController, public Implementation {
     RAMULATOR_REGISTER_IMPLEMENTATION(IDRAMController, AiMDRAMController, "AiM", "AiM DRAM controller.");
 
 private:
-    std::deque<Request> pending; // A queue for read requests that are about to finish (callback after RL)
+    std::deque<Request> pending_reads;   // A queue for read requests that are about to finish (callback after RL)
+    std::vector<Request> pending_writes; // A queue for write requests that are about to finish
 
     ReqBuffer m_active_buffer;   // Buffer for requests being served. This has the highest priority
     ReqBuffer m_priority_buffer; // Buffer for high-priority requests (e.g., maintenance like refresh).
@@ -76,36 +77,6 @@ public:
             req.final_command = m_dram->m_request_translations((int)req.type);
         }
 
-        // // Forward existing write requests to incoming read requests
-        // if (req.type == Request::Type::Read) {
-        //     auto my_addr_comparator = [req](const Request &wreq) {
-        //         return wreq.addr == req.addr;
-        //     };
-        //     auto my_addr_vec_comparator = [req, this](const Request &aim_req) {
-        //         // The AiM request changes the bank data
-        //         if (AiMISRInfo::convert_AiM_opcode_to_AiM_ISR(aim_req.opcode).target_level != "column")
-        //             return false;
-        //         return compare_addr_vec(aim_req, req, m_dram->m_levels("column"));
-        //     };
-
-        //     // Find the youngest write alias
-        //     ReqBuffer::iterator write_alis_it = std::find_if(m_write_buffer.begin(), m_write_buffer.end(), my_addr_comparator);
-        //     if (write_alis_it != m_write_buffer.end()) {
-
-        //         // Find the youngest AiM collision
-        //         ReqBuffer::iterator aim_alis_it = std::find_if(m_aim_buffer.begin(), m_aim_buffer.end(), my_addr_vec_comparator);
-
-        //         // Write to Read forwarding only if [there is no AiM alias] or [write alias is younger than aim alias]
-        //         if ((aim_alis_it != m_aim_buffer.end()) || (write_alis_it->AiM_req_id > aim_alis_it->AiM_req_id)) {
-
-        //             // The request will depart at the next cycle
-        //             req.depart = m_clk + 1;
-        //             pending.push_back(req);
-        //             return true;
-        //         }
-        //     }
-        // }
-
         // Forward existing write requests to incoming read requests
         if (req.type == Request::Type::Read) {
             auto compare_addr = [req](const Request &wreq) {
@@ -114,7 +85,7 @@ public:
             if (std::find_if(m_write_buffer.begin(), m_write_buffer.end(), compare_addr) != m_write_buffer.end()) {
                 // The request will depart at the next cycle
                 req.depart = m_clk + 1;
-                pending.push_back(req);
+                pending_reads.push_back(req);
                 return true;
             }
         }
@@ -157,7 +128,7 @@ public:
             m_logger->info("[CLK {}]", m_clk);
 
         // 1. Serve completed reads
-        serve_completed_reads();
+        serve_completed_reqs();
 
         m_refresh->tick();
 
@@ -175,7 +146,7 @@ public:
         if (request_found) {
             if (req_it->opcode == Request::Opcode::ISR_EOC) {
                 req_it->depart = m_clk;
-                pending.push_back(*req_it);
+                pending_reads.push_back(*req_it);
                 buffer->remove(req_it);
                 m_logger->info("[CLK {}] EOC ready for callback", m_clk);
             } else {
@@ -184,11 +155,15 @@ public:
 
                 m_dram->issue_command(req_it->command, req_it->addr_vec);
 
-                // If we are issuing the last command, set depart clock cycle and move the request to the pending queue
+                // If we are issuing the last command, set depart clock cycle and move the request to the pending_reads queue
                 if (req_it->command == req_it->final_command) {
+                    int latency = m_dram->m_command_latencies(req_it->command);
+                    assert(latency > 0);
+                    req_it->depart = m_clk + latency;
                     if (req_it->is_reader()) {
-                        req_it->depart = m_clk + m_dram->m_read_latency;
-                        pending.push_back(*req_it);
+                        pending_reads.push_back(*req_it);
+                    } else {
+                        pending_writes.push_back(*req_it);
                     }
                     // else if (req_it->type == Request::Type::Write) {
                     //     // TODO: Add code to update statistics
@@ -209,13 +184,13 @@ private:
      * @brief    Helper function to serve the completed read requests
      * @details
      * This function is called at the beginning of the tick() function.
-     * It checks the pending queue to see if the top request has received data from DRAM.
-     * If so, it finishes this request by calling its callback and poping it from the pending queue.
+     * It checks the pending_reads queue to see if the top request has received data from DRAM.
+     * If so, it finishes this request by calling its callback and poping it from the pending_reads queue.
      */
-    void serve_completed_reads() {
-        if (pending.size()) {
-            // Check the first pending request
-            auto &req = pending[0];
+    void serve_completed_reqs() {
+        if (pending_reads.size()) {
+            // Check the first pending_reads request
+            auto &req = pending_reads[0];
             if (req.depart <= m_clk) {
                 // Request received data from dram
                 if (req.depart - req.arrive > 1) {
@@ -223,16 +198,29 @@ private:
                     // TODO add the stats back
                 }
 
-                if (req.callback) {
-                    // If the request comes from outside (e.g., processor), call its callback
-                    req.callback(req);
-                } else {
-                    m_logger->info("[CLK {}] Warning: {} doesn't have callback set but it is in the pending queue!", m_clk, req.c_str());
+                if ((req.opcode != Request::Opcode::ISR_EOC) || (pending_writes.size() == 0)) {
+                    if (req.callback) {
+                        // If the request comes from outside (e.g., processor), call its callback
+                        m_logger->info("[CLK {}] Calling back {}!", m_clk, req.c_str());
+                        req.callback(req);
+                    } else {
+                        m_logger->info("[CLK {}] Warning: {} doesn't have callback set but it is in the pending_reads queue!", m_clk, req.c_str());
+                    }
+                    // Finally, remove this request from the pending_reads queue
+                    pending_reads.pop_front();
                 }
-                // Finally, remove this request from the pending queue
-                pending.pop_front();
             }
-        };
+        }
+        auto write_req_it = pending_writes.begin();
+        while (write_req_it != pending_writes.end()) {
+            if (write_req_it->depart <= m_clk) {
+                // Remove this write request
+                m_logger->info("[CLK {}] Finished {}!", m_clk, write_req_it->c_str());
+                write_req_it = pending_writes.erase(write_req_it);
+            } else {
+                ++write_req_it;
+            }
+        }
     };
 
     /**
