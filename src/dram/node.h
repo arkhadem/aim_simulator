@@ -159,6 +159,10 @@ struct DRAMNodeBase {
     };
 
     int get_preq_command(int command, const AddrVec_t &addr_vec, Clk_t m_clk) {
+        printf("Command: %d\n", command);
+        printf("m_level: %d\n", m_level);
+        printf("size[%d]\n", m_spec->m_preqs.size());
+        printf("size[%d][%d]\n", m_spec->m_preqs[m_level].size());
         if (m_spec->m_preqs[m_level][command]) {
             int preq_cmd = m_spec->m_preqs[m_level][command](static_cast<NodeType *>(this), command, addr_vec, m_clk);
             if (preq_cmd != -1) {
