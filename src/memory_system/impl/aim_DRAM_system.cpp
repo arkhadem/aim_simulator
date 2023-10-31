@@ -40,22 +40,24 @@ protected:
     std::map<CFR, int32_t> CFR_values;
     std::map<Addr_t, CFR> address_to_CFR;
 
-    uint8_t CountSetBit(const uint8_t byte) const {
+    uint8_t CountSetBit(const int64_t ch_mask) const {
+        assert(ch_mask > 0);
+
         uint8_t count = 0;
 
-        for (int i = 0; i < 8; i++)
-            if (byte & (0x1 << i))
+        for (int i = 0; i < 32; i++)
+            if (ch_mask & (0x1 << i))
                 count++;
 
         return count;
     }
 
-    uint8_t FindFirstChannelIndex(const uint8_t byte) const {
-        if ((byte & 0xff) == 0)
+    uint8_t FindFirstChannelIndex(const uint8_t ch_mask) const {
+        if ((ch_mask & 0xff) == 0)
             return 0;
 
-        for (int i = 0; i < 8; i++)
-            if (byte & (0x1 << i))
+        for (int i = 0; i < 32; i++)
+            if (ch_mask & (0x1 << i))
                 return (0x1 << i);
 
         return 0;
