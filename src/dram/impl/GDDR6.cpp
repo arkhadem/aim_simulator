@@ -185,7 +185,7 @@ public:
              1,    // nCWLREG
              1,    // nCWLGB
              1,    // nWPRE
-             570   // tCK_ps
+             500   // tCK_ps
          }},
     };
 

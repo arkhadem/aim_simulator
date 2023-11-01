@@ -206,7 +206,7 @@ private:
                     } else {
                         m_logger->info("[CLK {}] Warning: {} doesn't have callback set but it is in the pending_reads queue!", m_clk, req.c_str());
                     }
-                    // Finally, remove this request from the pending_reads queue
+                    // Finally, r emove this request from the pending_reads queue
                     pending_reads.pop_front();
                 }
             }

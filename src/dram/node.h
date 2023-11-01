@@ -105,6 +105,7 @@ struct DRAMNodeBase {
             return;
         }
 
+        assert(child_id < m_child_nodes.size());
         m_child_nodes[child_id]->update_states(command, addr_vec, clk);
     };
 
@@ -165,10 +166,10 @@ struct DRAMNodeBase {
     };
 
     int get_preq_command(int command, const AddrVec_t &addr_vec, Clk_t m_clk) {
-        printf("Command: %d\n", command);
-        printf("m_level: %d\n", m_level);
-        printf("size[%d]\n", m_spec->m_preqs.size());
-        printf("size[%d][%d]\n", m_spec->m_preqs.size(), m_spec->m_preqs[m_level].size());
+        // printf("Command: %d\n", command);
+        // printf("m_level: %d\n", m_level);
+        // printf("size[%d]\n", m_spec->m_preqs.size());
+        // printf("size[%d][%d]\n", m_spec->m_preqs.size(), m_spec->m_preqs[m_level].size());
         if (m_spec->m_preqs[m_level][command]) {
             int preq_cmd = m_spec->m_preqs[m_level][command](static_cast<NodeType *>(this), command, addr_vec, m_clk);
             if (preq_cmd != -1) {
@@ -190,6 +191,13 @@ struct DRAMNodeBase {
         }
 
         // recursively get_preq_command at my child
+        // printf("[");
+        // for (int i = 0; i < addr_vec.size(); i++) {
+        //     printf("%d, ", addr_vec[i]);
+        // }
+        // printf("]\n");
+        // printf("accessing child %d from %d children\n", child_id, m_child_nodes.size());
+        assert(child_id < m_child_nodes.size());
         return m_child_nodes[child_id]->get_preq_command(command, addr_vec, m_clk);
     };
 
@@ -212,6 +220,7 @@ struct DRAMNodeBase {
             return command;
         }
 
+        assert(child_id < m_child_nodes.size());
         return m_child_nodes[child_id]->check_ready(command, addr_vec, clk);
     };
 
@@ -230,6 +239,7 @@ struct DRAMNodeBase {
         }
 
         // recursively check for row hits at my child
+        assert(child_id < m_child_nodes.size());
         return m_child_nodes[child_id]->check_rowbuffer_hit(command, addr_vec, m_clk);
     };
 };

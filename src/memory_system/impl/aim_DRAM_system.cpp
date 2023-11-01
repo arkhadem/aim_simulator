@@ -65,11 +65,19 @@ protected:
 
     void apply_addr_mapp(Request &req, int channel_id) {
         req.addr_vec.resize(5, -1);
+        if ((channel_id < 0) || (channel_id >= 32)) {
+            printf("Error: %s has CH more than 32!\n", req.c_str());
+            exit(-1);
+        }
         req.addr_vec[0] = channel_id;
         if (req.bank_index == -1) {
             req.addr_vec[1] = -1;
             req.addr_vec[2] = -1;
         } else {
+            if ((req.bank_index < 0) || (req.bank_index >= 16)) {
+                printf("Error: %s has BA more than 16!\n", req.c_str());
+                exit(-1);
+            }
             req.addr_vec[1] = req.bank_index / 4;
             req.addr_vec[2] = req.bank_index % 4;
         }
