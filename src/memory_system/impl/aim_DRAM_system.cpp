@@ -219,7 +219,6 @@ public:
                     auto ch_mask = host_req.channel_mask;
                     uint8_t channel_count = CountSetBit(ch_mask);
                     Request aim_req = host_req;
-                    aim_req.callback = callback;
 
                     switch (opcode) {
 
@@ -238,6 +237,10 @@ public:
                     case Request::Opcode::ISR_WR_ABK: {
                         // Decoding opcode
                         AiMISR aim_ISR = AiMISRInfo::convert_AiM_opcode_to_AiM_ISR(opcode);
+
+                        if (aim_ISR.AiM_DMA_blocking) {
+                            aim_req.callback = callback;
+                        }
 
                         if (aim_ISR.channel_count_eq_one) {
                             if (channel_count != 1) {
@@ -308,6 +311,7 @@ public:
                     }
 
                     case Request::Opcode::ISR_EOC: {
+                        aim_req.callback = callback;
                         for (int channel_id = 0; channel_id < m_controllers.size(); channel_id++) {
                             aim_req.AiM_req_id = AiM_req_id++;
                             aim_req.host_req_id = host_req.host_req_id;
@@ -340,6 +344,7 @@ public:
                     }
                     case Request::MemAccessRegion::MEM: {
                         Request aim_req = host_req;
+                        aim_req.callback = callback;
                         aim_req.AiM_req_id = AiM_req_id++;
                         apply_addr_mapp(aim_req, aim_req.channel_mask);
                         int channel_id = aim_req.addr_vec[0];
