@@ -53,11 +53,11 @@ public:
 
         if (is_success) {
             switch (req.type) {
-            case Request::Type::Read: {
+            case Type::Read: {
                 s_num_read_requests++;
                 break;
             }
-            case Request::Type::Write: {
+            case Type::Write: {
                 s_num_write_requests++;
                 break;
             }

@@ -52,9 +52,9 @@ void SimpleO3LLC::tick() {
 bool SimpleO3LLC::send(Request req) {
     CacheSet_t &set = get_set(req.addr);
 
-    if (req.type == Request::Type::Read) {
+    if (req.type == Type::Read) {
         s_llc_read_access++;
-    } else if (req.type == Request::Type::Write) {
+    } else if (req.type == Type::Write) {
         s_llc_write_access++;
     }
 
@@ -65,7 +65,7 @@ bool SimpleO3LLC::send(Request req) {
                   m_clk, req.source_id, (int)req.type, req.addr, get_index(req.addr), get_tag(req.addr), m_clk, m_clk + m_latency);
 
         // Update the LRU status
-        set.push_back({req.addr, get_tag(req.addr), line_it->dirty || (req.type == Request::Type::Write), true});
+        set.push_back({req.addr, get_tag(req.addr), line_it->dirty || (req.type == Type::Write), true});
         set.erase(line_it);
 
         // Add to the hit list to callback when finished
@@ -77,15 +77,15 @@ bool SimpleO3LLC::send(Request req) {
                   "[Clk={}] Request Source: {}, Type: {}, Addr: {}, Index: {}, Tag: {}. Miss.",
                   m_clk, req.source_id, (int)req.type, req.addr, get_index(req.addr), get_tag(req.addr), m_clk, m_clk + m_latency);
 
-        if (req.type == Request::Type::Read) {
+        if (req.type == Type::Read) {
             s_llc_read_misses++;
-        } else if (req.type == Request::Type::Write) {
+        } else if (req.type == Type::Write) {
             s_llc_write_misses++;
         }
 
-        bool dirty = (req.type == Request::Type::Write);
-        if (req.type == Request::Type::Write) {
-            req.type = Request::Type::Read;
+        bool dirty = (req.type == Type::Write);
+        if (req.type == Type::Write) {
+            req.type = Type::Read;
         }
 
         // MSHR lookup
@@ -202,7 +202,7 @@ void SimpleO3LLC::evict_line(CacheSet_t &set, CacheSet_t::iterator victim_it) {
 
     // Generate writeback request if victim line is dirty
     if (victim_it->dirty) {
-        Request writeback_req(victim_it->addr, (int)Request::Type::Write);
+        Request writeback_req(victim_it->addr, (int)Type::Write);
         m_miss_list.push_back(std::make_pair(m_clk + m_latency, writeback_req));
 
         DEBUG_LOG(DSIMPLEO3LLC, m_logger, "Writeback Request will be issued at Clk={}.", m_clk + m_latency);

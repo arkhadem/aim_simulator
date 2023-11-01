@@ -144,7 +144,7 @@ void SimpleO3Core::tick() {
             return;
         };
 
-        Request load_request(m_load_addr, (int)Request::Type::Read, m_id, m_callback);
+        Request load_request(m_load_addr, (int)Type::Read, m_id, m_callback);
         if (!m_translation->translate(load_request)) {
             return;
         };
@@ -165,7 +165,7 @@ void SimpleO3Core::tick() {
 
     // Third, try to send the writeback to the LLC
     if (m_writeback_addr != -1) {
-        Request writeback_request(m_writeback_addr, (int)Request::Type::Write, m_id, m_callback);
+        Request writeback_request(m_writeback_addr, (int)Type::Write, m_id, m_callback);
         if (!m_translation->translate(writeback_request)) {
             return;
         };

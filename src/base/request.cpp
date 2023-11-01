@@ -2,11 +2,11 @@
 
 namespace Ramulator {
 
-Request::Request(Addr_t addr, int type_id) : addr(addr), type_id(type_id), type((Request::Type)type_id){};
+Request::Request(Addr_t addr, int type_id) : addr(addr), type_id(type_id), type((Type)type_id){};
 
-Request::Request(AddrVec_t addr_vec, int type_id) : addr_vec(addr_vec), type_id(type_id), type((Request::Type)type_id){};
+Request::Request(AddrVec_t addr_vec, int type_id) : addr_vec(addr_vec), type_id(type_id), type((Type)type_id){};
 
-Request::Request(Addr_t addr, int type_id, int source_id, std::function<void(Request &)> callback) : addr(addr), type_id(type_id), type((Request::Type)type_id), source_id(source_id), callback(callback){};
+Request::Request(Addr_t addr, int type_id, int source_id, std::function<void(Request &)> callback) : addr(addr), type_id(type_id), type((Type)type_id), source_id(source_id), callback(callback){};
 
 bool Request::is_reader() {
     return (type == Type::Read) ||

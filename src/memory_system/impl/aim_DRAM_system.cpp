@@ -5,6 +5,7 @@
 #include "dram_controller/controller.h"
 #include "memory_system/memory_system.h"
 #include "translation/translation.h"
+#include <cassert>
 #include <cstdint>
 #include <cstdio>
 #include <math.h>
@@ -13,7 +14,7 @@
 namespace Ramulator {
 
 #define ISR_SIZE (1 << 21)
-#define MAX_CHANNEL_COUNT 8
+#define MAX_CHANNEL_COUNT 32
 
 class AiMDRAMSystem final : public IMemorySystem, public Implementation {
     RAMULATOR_REGISTER_IMPLEMENTATION(IMemorySystem, AiMDRAMSystem, "AiMDRAM", "AiM memory system (AiM DMA).");
@@ -45,28 +46,33 @@ protected:
 
         uint8_t count = 0;
 
-        for (int i = 0; i < 32; i++)
+        for (int i = 0; i < MAX_CHANNEL_COUNT; i++)
             if (ch_mask & (0x1 << i))
                 count++;
 
         return count;
     }
 
-    uint8_t FindFirstChannelIndex(const uint8_t ch_mask) const {
-        if ((ch_mask & 0xff) == 0)
-            return 0;
+    uint8_t FindFirstChannelIndex(int64_t &ch_mask) const {
+        uint32_t ch_mask_u = ch_mask;
+        assert(ch_mask_u & 0xffffffff != 0);
 
-        for (int i = 0; i < 32; i++)
-            if (ch_mask & (0x1 << i))
-                return (0x1 << i);
+        for (int i = 0; i < MAX_CHANNEL_COUNT; i++) {
+            if (ch_mask_u & (0x1 << i)) {
+                ch_mask_u &= ~(0x1 << i);
+                ch_mask = ch_mask_u;
+                return MAX_CHANNEL_COUNT - 1 - i;
+            }
+        }
 
+        assert(false);
         return 0;
     }
 
     void apply_addr_mapp(Request &req, int channel_id) {
         req.addr_vec.resize(5, -1);
-        if ((channel_id < 0) || (channel_id >= 32)) {
-            printf("Error: %s has CH more than 32!\n", req.c_str());
+        if ((channel_id < 0) || (channel_id >= MAX_CHANNEL_COUNT)) {
+            printf("Error: %s has CH more than %d!\n", req.c_str(), MAX_CHANNEL_COUNT);
             exit(-1);
         }
         req.addr_vec[0] = channel_id;
@@ -86,8 +92,8 @@ protected:
     }
 
 public:
-    std::map<Request::Type, std::map<Request::MemAccessRegion, int>> s_num_RW_requests;
-    std::map<Request::Opcode, int> s_num_AiM_requests;
+    std::map<Type, std::map<MemAccessRegion, int>> s_num_RW_requests;
+    std::map<Opcode, int> s_num_AiM_requests;
     int s_ISR_queue_full = 0;
     int s_wait_RD_stall = 0;
 
@@ -134,8 +140,8 @@ public:
             .name("total_num_ISR_full")
             .desc("total number of cycles that AiM DMA does not receive ISR because of lack of enough ISR space");
 
-        for (const auto type : {Request::Type::Read, Request::Type::Write}) {
-            for (const auto mem_access_region : {Request::MemAccessRegion::GPR, Request::MemAccessRegion::CFR, Request::MemAccessRegion::MEM}) {
+        for (const auto type : {Type::Read, Type::Write}) {
+            for (const auto mem_access_region : {MemAccessRegion::GPR, MemAccessRegion::CFR, MemAccessRegion::MEM}) {
                 s_num_RW_requests[type][mem_access_region] = 0;
                 register_stat(s_num_RW_requests[type][mem_access_region])
                     .name(fmt::format("total_num_{}_{}_requests",
@@ -146,11 +152,11 @@ public:
                                       AiMISRInfo::convert_mem_access_region_to_str(mem_access_region)));
             }
         }
-        for (int opcode = (int)Request::Opcode::MIN + 1; opcode < (int)Request::Opcode::MAX; opcode++) {
-            s_num_AiM_requests[(Request::Opcode)opcode] = 0;
-            register_stat(s_num_AiM_requests[(Request::Opcode)opcode])
-                .name(fmt::format("total_num_AiM_{}_requests", AiMISRInfo::convert_AiM_opcode_to_str((Request::Opcode)opcode)))
-                .desc(fmt::format("total number of AiM {} requests", AiMISRInfo::convert_AiM_opcode_to_str((Request::Opcode)opcode)));
+        for (int opcode = (int)Opcode::MIN + 1; opcode < (int)Opcode::MAX; opcode++) {
+            s_num_AiM_requests[(Opcode)opcode] = 0;
+            register_stat(s_num_AiM_requests[(Opcode)opcode])
+                .name(fmt::format("total_num_AiM_{}_requests", AiMISRInfo::convert_AiM_opcode_to_str((Opcode)opcode)))
+                .desc(fmt::format("total number of AiM {} requests", AiMISRInfo::convert_AiM_opcode_to_str((Opcode)opcode)));
         }
     };
 
@@ -166,12 +172,12 @@ public:
         m_logger->info("[CLK {}] {} pushed to the queue!", m_clk, req.c_str());
 
         switch (req.type) {
-        case Request::Type::AIM: {
+        case Type::AIM: {
             s_num_AiM_requests[req.opcode]++;
             break;
         }
-        case Request::Type::Read:
-        case Request::Type::Write: {
+        case Type::Read:
+        case Type::Write: {
             s_num_RW_requests[req.type][req.mem_access_region]++;
             break;
         }
@@ -213,28 +219,28 @@ public:
                 bool all_AiM_requests_sent = true;
 
                 switch (host_req.type) {
-                case Request::Type::AIM: {
-                    Request::Opcode opcode = host_req.opcode;
+                case Type::AIM: {
+                    Opcode opcode = host_req.opcode;
                     auto opsize = host_req.opsize;
-                    auto ch_mask = host_req.channel_mask;
+                    int64_t ch_mask = host_req.channel_mask;
                     uint8_t channel_count = CountSetBit(ch_mask);
                     Request aim_req = host_req;
 
                     switch (opcode) {
 
-                    case Request::Opcode::ISR_WR_SBK:
-                    case Request::Opcode::ISR_WR_GB:
-                    case Request::Opcode::ISR_WR_BIAS:
-                    case Request::Opcode::ISR_RD_MAC:
-                    case Request::Opcode::ISR_RD_AF:
-                    case Request::Opcode::ISR_RD_SBK:
-                    case Request::Opcode::ISR_COPY_BKGB:
-                    case Request::Opcode::ISR_COPY_GBBK:
-                    case Request::Opcode::ISR_MAC_SBK:
-                    case Request::Opcode::ISR_MAC_ABK:
-                    case Request::Opcode::ISR_AF:
-                    case Request::Opcode::ISR_EWMUL:
-                    case Request::Opcode::ISR_WR_ABK: {
+                    case Opcode::ISR_WR_SBK:
+                    case Opcode::ISR_WR_GB:
+                    case Opcode::ISR_WR_BIAS:
+                    case Opcode::ISR_RD_MAC:
+                    case Opcode::ISR_RD_AF:
+                    case Opcode::ISR_RD_SBK:
+                    case Opcode::ISR_COPY_BKGB:
+                    case Opcode::ISR_COPY_GBBK:
+                    case Opcode::ISR_MAC_SBK:
+                    case Opcode::ISR_MAC_ABK:
+                    case Opcode::ISR_AF:
+                    case Opcode::ISR_EWMUL:
+                    case Opcode::ISR_WR_ABK: {
                         // Decoding opcode
                         AiMISR aim_ISR = AiMISRInfo::convert_AiM_opcode_to_AiM_ISR(opcode);
 
@@ -248,17 +254,17 @@ public:
                             }
                         }
 
-                        if (opcode == Request::Opcode::ISR_AF) {
+                        if (opcode == Opcode::ISR_AF) {
                             aim_req.afm = CFR_values[CFR::AFM];
                             aim_req.row_addr = (1 << 29) + aim_req.afm;
                         }
 
-                        if ((host_req.opcode == Request::Opcode::ISR_MAC_ABK) ||
-                            (host_req.opcode == Request::Opcode::ISR_MAC_SBK)) {
+                        if ((host_req.opcode == Opcode::ISR_MAC_ABK) ||
+                            (host_req.opcode == Opcode::ISR_MAC_SBK)) {
                             aim_req.broadcast = CFR_values[CFR::BROADCAST];
                         }
 
-                        if (host_req.opcode == Request::Opcode::ISR_MAC_ABK) {
+                        if (host_req.opcode == Opcode::ISR_MAC_ABK) {
                             aim_req.ewmul_bg = CFR_values[CFR::EWMUL_BG];
                         }
 
@@ -272,20 +278,20 @@ public:
                             opsize = 1;
 
                         for (int i = 0; i < opsize; i++) {
-                            uint8_t channel_mask = ch_mask;
+                            int64_t channel_mask = ch_mask;
 
                             if (aim_ISR.is_field_legal(AiMISR::Field::col_addr) == true)
                                 aim_req.col_addr = host_req.col_addr + i;
 
                             for (int cnt = 0; cnt < channel_count; cnt++) {
                                 uint8_t channel_id = FindFirstChannelIndex(channel_mask);
-                                channel_mask &= (~channel_id);
-                                channel_id = log2(channel_id);
 
                                 aim_req.AiM_req_id = AiM_req_id++;
                                 aim_req.host_req_id = host_req.host_req_id;
                                 apply_addr_mapp(aim_req, channel_id);
                                 m_logger->info("[CLK {}] 1- Sending {} to channel {}", m_clk, aim_req.c_str(), channel_id);
+                                assert(channel_id < m_controllers.size());
+                                assert(channel_id < MAX_CHANNEL_COUNT);
                                 if (m_controllers[channel_id]->send(aim_req) == false) {
                                     remaining_AiM_requests[channel_id].push(aim_req);
                                     all_AiM_requests_sent = false;
@@ -300,17 +306,17 @@ public:
                         break;
                     }
 
-                    case Request::Opcode::ISR_WR_AFLUT: {
+                    case Opcode::ISR_WR_AFLUT: {
                         throw ConfigurationError("AiMDRAMSystem: ISR_WR_AFLUT not supported by now!");
                         break;
                     }
 
-                    case Request::Opcode::ISR_EWADD: {
+                    case Opcode::ISR_EWADD: {
                         // Do nothing
                         break;
                     }
 
-                    case Request::Opcode::ISR_EOC: {
+                    case Opcode::ISR_EOC: {
                         aim_req.callback = callback;
                         for (int channel_id = 0; channel_id < m_controllers.size(); channel_id++) {
                             aim_req.AiM_req_id = AiM_req_id++;
@@ -330,19 +336,19 @@ public:
                         break;
                     }
                 } break;
-                case Request::Type::Read: {
+                case Type::Read: {
                     switch (host_req.mem_access_region) {
-                    case Request::MemAccessRegion::CFR: {
+                    case MemAccessRegion::CFR: {
                         // Do nothing
                         all_AiM_requests_sent = true;
                         break;
                     }
-                    case Request::MemAccessRegion::GPR: {
+                    case MemAccessRegion::GPR: {
                         // Do nothing
                         all_AiM_requests_sent = true;
                         break;
                     }
-                    case Request::MemAccessRegion::MEM: {
+                    case MemAccessRegion::MEM: {
                         Request aim_req = host_req;
                         aim_req.callback = callback;
                         aim_req.AiM_req_id = AiM_req_id++;
@@ -363,9 +369,9 @@ public:
                     }
                     break;
                 }
-                case Request::Type::Write: {
+                case Type::Write: {
                     switch (host_req.mem_access_region) {
-                    case Request::MemAccessRegion::CFR: {
+                    case MemAccessRegion::CFR: {
                         if (address_to_CFR.find(host_req.addr) == address_to_CFR.end()) {
                             throw ConfigurationError("AiMDRAMSystem: unknown CFR at location {}!", (int)host_req.addr);
                         }
@@ -373,12 +379,12 @@ public:
                         all_AiM_requests_sent = true;
                         break;
                     }
-                    case Request::MemAccessRegion::GPR: {
+                    case MemAccessRegion::GPR: {
                         // Do nothing
                         all_AiM_requests_sent = true;
                         break;
                     }
-                    case Request::MemAccessRegion::MEM: {
+                    case MemAccessRegion::MEM: {
                         Request aim_req = host_req;
                         aim_req.AiM_req_id = AiM_req_id++;
                         apply_addr_mapp(aim_req, aim_req.channel_mask);

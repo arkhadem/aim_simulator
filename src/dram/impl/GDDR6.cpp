@@ -159,18 +159,18 @@ public:
         {"GDDR6_AiM_timing", // name
          {
              2000, // rate
-             1,    // nBL (changed 1.25)
-             25,   // nCL (changed)
-             18,   // nRCDRD (changed)
-             14,   // nRCDWR (changed)
-             16,   // nRP (changed)
-             27,   // nRAS (changed from SIM: RDSBK (opsize=1) = ACT + RD + PRE = nRAS + nRP = nRAS + 16 = 43)
+             2,    // nBL (changed 1.25)
+             50,   // nCL (changed)
+             36,   // nRCDRD (changed)
+             28,   // nRCDWR (changed)
+             32,   // nRP (changed)
+             54,   // nRAS (changed from SIM: RDSBK (opsize=1) = ACT + RD + PRE = nRAS + nRP = nRAS + 32 = 86)
              89,   // nRC (not imported, used only for precharge)
-             17,   // nWR (changed 16.625)
-             6,    // nRTP (changed 6.25)
+             33,   // nWR (changed 16.625)
+             12,   // nRTP (changed 6.25)
              6,    // nCWL
-             1,    // nCCDS (changed from ISSCC)
-             1,    // nCCDL (based on Xavier's WRSBK and RDSBK profiling results)
+             2,    // nCCDS (changed from ISSCC)
+             2,    // nCCDL (based on Xavier's WRSBK and RDSBK profiling results)
              11,   // nRRDS
              11,   // nRRDL
              9,    // nWTRS

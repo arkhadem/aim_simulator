@@ -52,7 +52,7 @@ public:
         req.final_command = m_dram->m_request_translations((int)req.type);
 
         // Forward existing write requests to incoming read requests
-        if (req.type == Request::Type::Read) {
+        if (req.type == Type::Read) {
             auto compare_addr = [req](const Request &wreq) {
                 return wreq.addr == req.addr;
             };
@@ -67,9 +67,9 @@ public:
         // Else, enqueue them to corresponding buffer based on request type id
         bool is_success = false;
         req.arrive = m_clk;
-        if (req.type == Request::Type::Read) {
+        if (req.type == Type::Read) {
             is_success = m_read_buffer.enqueue(req);
-        } else if (req.type == Request::Type::Write) {
+        } else if (req.type == Type::Write) {
             is_success = m_write_buffer.enqueue(req);
         } else {
             throw std::runtime_error("Invalid request type!");
@@ -116,10 +116,10 @@ public:
 
             // If we are issuing the last command, set depart clock cycle and move the request to the pending queue
             if (req_it->command == req_it->final_command) {
-                if (req_it->type == Request::Type::Read) {
+                if (req_it->type == Type::Read) {
                     req_it->depart = m_clk + m_dram->m_read_latency;
                     pending.push_back(*req_it);
-                } else if (req_it->type == Request::Type::Write) {
+                } else if (req_it->type == Type::Write) {
                     // TODO: Add code to update statistics
                 }
                 buffer->remove(req_it);

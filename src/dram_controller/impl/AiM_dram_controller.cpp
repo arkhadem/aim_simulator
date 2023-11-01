@@ -31,6 +31,10 @@ private:
     size_t s_num_row_misses = 0;
     size_t s_num_row_conflicts = 0;
 
+    std::map<Type, int> s_num_RW_cycles;
+    std::map<Opcode, int> s_num_AiM_cycles;
+    int s_num_idle_cycles = 0;
+
 public:
     void init() override {
         m_wr_low_watermark = param<float>("wr_low_watermark").desc("Threshold for switching back to read mode.").default_val(0.2f);
@@ -52,6 +56,25 @@ public:
         m_row_addr_idx = m_dram->m_levels("row");
         m_priority_buffer.max_size = 512 * 3 + 32;
         m_logger = Logging::create_logger("AiMDRAMController[" + std::to_string(m_channel_id) + "]");
+
+        for (const auto type : {Type::Read, Type::Write}) {
+            s_num_RW_cycles[type] = 0;
+            register_stat(s_num_RW_cycles[type])
+                .name(fmt::format("CH{}_{}_cycles",
+                                  m_channel_id,
+                                  AiMISRInfo::convert_type_to_str(type)));
+        }
+
+        for (int opcode = (int)Opcode::MIN + 1; opcode < (int)Opcode::MAX; opcode++) {
+            s_num_AiM_cycles[(Opcode)opcode] = 0;
+            register_stat(s_num_AiM_cycles[(Opcode)opcode])
+                .name(fmt::format("CH{}_AiM_{}_cycles", m_channel_id, AiMISRInfo::convert_AiM_opcode_to_str((Opcode)opcode)))
+                .desc(fmt::format("total number of AiM {} cycles", AiMISRInfo::convert_AiM_opcode_to_str((Opcode)opcode)));
+        }
+
+        register_stat(s_num_idle_cycles)
+            .name(fmt::format("CH{}_idle_cycles", m_channel_id))
+            .desc(fmt::format("total number of idle cycles"));
     };
 
     bool compare_addr_vec(Request req1, Request req2, int min_compared_level) {
@@ -67,7 +90,7 @@ public:
     }
 
     bool send(Request &req) override {
-        if (req.type == Request::Type::AIM) {
+        if (req.type == Type::AIM) {
             if ((m_write_buffer.size() != 0) || (m_read_buffer.size() != 0))
                 return false;
             req.final_command = m_dram->m_aim_request_translations((int)req.opcode);
@@ -78,7 +101,7 @@ public:
         }
 
         // Forward existing write requests to incoming read requests
-        if (req.type == Request::Type::Read) {
+        if (req.type == Type::Read) {
             auto compare_addr = [req](const Request &wreq) {
                 return wreq.addr == req.addr;
             };
@@ -93,11 +116,11 @@ public:
         // Else, enqueue them to corresponding buffer based on request type id
         bool is_success = false;
         req.arrive = m_clk;
-        if (req.type == Request::Type::Read) {
+        if (req.type == Type::Read) {
             is_success = m_read_buffer.enqueue(req);
-        } else if (req.type == Request::Type::Write) {
+        } else if (req.type == Type::Write) {
             is_success = m_write_buffer.enqueue(req);
-        } else if (req.type == Request::Type::AIM) {
+        } else if (req.type == Type::AIM) {
             is_success = m_aim_buffer.enqueue(req);
         } else {
             throw std::runtime_error("Invalid request type!");
@@ -112,7 +135,7 @@ public:
     };
 
     bool priority_send(Request &req) override {
-        if (req.type == Request::Type::AIM)
+        if (req.type == Type::AIM)
             req.final_command = m_dram->m_aim_request_translations((int)req.opcode);
         else
             req.final_command = m_dram->m_request_translations((int)req.type);
@@ -144,7 +167,7 @@ public:
 
         // 4. Finally, issue the commands to serve the request
         if (request_found) {
-            if (req_it->opcode == Request::Opcode::ISR_EOC) {
+            if (req_it->opcode == Opcode::ISR_EOC) {
                 req_it->depart = m_clk;
                 pending_reads.push_back(*req_it);
                 buffer->remove(req_it);
@@ -152,7 +175,8 @@ public:
             } else {
                 // If we find a real request to serve
                 m_logger->info("[CLK {}] Issuing {} for {}", m_clk, std::string(m_dram->m_commands(req_it->command)).c_str(), req_it->c_str());
-
+                if (req_it->issue == -1)
+                    req_it->issue = m_clk - 1;
                 m_dram->issue_command(req_it->command, req_it->addr_vec);
 
                 // If we are issuing the last command, set depart clock cycle and move the request to the pending_reads queue
@@ -165,17 +189,26 @@ public:
                     } else {
                         pending_writes.push_back(*req_it);
                     }
-                    // else if (req_it->type == Request::Type::Write) {
+                    if (req_it->type == Type::AIM) {
+                        s_num_AiM_cycles[req_it->opcode] += (m_clk - req_it->issue);
+                    } else {
+                        s_num_RW_cycles[req_it->type] += (m_clk - req_it->issue);
+                    }
+                    // else if (req_it->type == Type::Write) {
                     //     // TODO: Add code to update statistics
                     // }
                     buffer->remove(req_it);
-                } else if (req_it->type != Request::Type::AIM) {
+                } else if (req_it->type != Type::AIM) {
                     if (m_dram->m_command_meta(req_it->command).is_opening) {
                         m_active_buffer.enqueue(*req_it);
                         buffer->remove(req_it);
                     }
                 }
             }
+        } else if (m_read_buffer.size() == 0 && m_write_buffer.size() == 0 && m_aim_buffer.size() == 0 && pending_reads.size() == 0 && pending_writes.size() == 0) {
+            if (m_channel_id == 0)
+                m_logger->info("[CLK {}] CH0 IDLE", m_clk);
+            s_num_idle_cycles += 1;
         }
     };
 
@@ -193,12 +226,8 @@ private:
             auto &req = pending_reads[0];
             if (req.depart <= m_clk) {
                 // Request received data from dram
-                if (req.depart - req.arrive > 1) {
-                    // Check if this requests accesses the DRAM or is being forwarded.
-                    // TODO add the stats back
-                }
 
-                if ((req.opcode != Request::Opcode::ISR_EOC) || (pending_writes.size() == 0)) {
+                if ((req.opcode != Opcode::ISR_EOC) || (pending_writes.size() == 0)) {
                     if (req.callback) {
                         // If the request comes from outside (e.g., processor), call its callback
                         m_logger->info("[CLK {}] Calling back {}!", m_clk, req.c_str());
@@ -271,7 +300,7 @@ private:
             if (!request_found) {
                 if (m_aim_buffer.size() != 0) {
                     req_it = m_aim_buffer.begin();
-                    if (req_it->opcode == Request::Opcode::ISR_EOC) {
+                    if (req_it->opcode == Opcode::ISR_EOC) {
                         req_buffer = &m_aim_buffer;
                         return true;
                     } else {

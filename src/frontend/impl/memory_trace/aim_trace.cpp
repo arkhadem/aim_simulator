@@ -109,8 +109,8 @@ private:
     }
 
     void receive(Request &req) {
-        assert(req.type == Request::Type::AIM);
-        assert(req.opcode == Request::Opcode::ISR_EOC);
+        assert(req.type == Type::AIM);
+        assert(req.opcode == Opcode::ISR_EOC);
         m_logger->info("End-Of-Compute Called Back!");
         m_trace_reached_calledback = true;
     }
@@ -165,7 +165,7 @@ private:
                     req.type = AiMISRInfo::convert_str_to_type(tokens[token_idx++]);
                     req.type_id = (int)req.type;
 
-                    if (req.type == Request::Type::AIM) {
+                    if (req.type == Type::AIM) {
 
                         // Decoding opcode
                         std::string ISR_opcode = tokens[token_idx++];
@@ -206,7 +206,7 @@ private:
                         DECODE_AIM_HOST_REQ_FIELD_IF_NEEDED(col_addr)
                         DECODE_AIM_HOST_REQ_FIELD_IF_NEEDED(thread_index)
 
-                        if (req.opcode == Request::Opcode::ISR_EOC) {
+                        if (req.opcode == Opcode::ISR_EOC) {
                             m_trace_reached_EOC = true;
                             req.callback = callback;
                             m_logger->info("End-Of-Compute Reached!");
@@ -216,10 +216,10 @@ private:
                         // Decoding opcode
                         req.mem_access_region = AiMISRInfo::convert_str_to_mem_access_region(tokens[token_idx++]);
 
-                        if (req.mem_access_region == Request::MemAccessRegion::CFR) {
+                        if (req.mem_access_region == MemAccessRegion::CFR) {
                             DECODE_AND_SET_FIELD(addr)
                             DECODE_AND_SET_FIELD(data)
-                        } else if (req.mem_access_region == Request::MemAccessRegion::GPR) {
+                        } else if (req.mem_access_region == MemAccessRegion::GPR) {
                             DECODE_AND_SET_FIELD(addr)
                         } else {
                             DECODE_AND_SET_FIELD(channel_mask)
