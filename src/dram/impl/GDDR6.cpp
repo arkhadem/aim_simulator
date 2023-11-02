@@ -34,7 +34,12 @@ public:
              8,    // nBL
              24,   // nCL
              26,   // nRCDRD
+             26,   // nRCDRDMAC
+             26,   // nRCDEWMUL
+             26,   // nRCDRDAF
+             30,   // nRCDRDCP
              16,   // nRCDWR
+             16,   // nRCDWRCP
              26,   // nRP
              53,   // nRAS
              79,   // nRC
@@ -57,6 +62,7 @@ public:
              1,    // nCWLREG
              1,    // nCWLGB
              1,    // nWPRE
+             32,   // nMODCH
              570   // tCK_ps
          }},
 
@@ -66,7 +72,12 @@ public:
              8,    // nBL
              24,   // nCL
              30,   // nRCDRD
+             30,   // nRCDRDMAC
+             30,   // nRCDEWMUL
+             30,   // nRCDRDAF
+             30,   // nRCDRDCP
              19,   // nRCDWR
+             19,   // nRCDWRCP
              30,   // nRP
              60,   // nRAS
              89,   // nRC
@@ -89,6 +100,7 @@ public:
              1,    // nCWLREG
              1,    // nCWLGB
              1,    // nWPRE
+             32,   // nMODCH
              570   // tCK_ps
          }},
 
@@ -98,7 +110,12 @@ public:
              4,    // nBL
              24,   // nCL
              26,   // nRCDRD
+             26,   // nRCDRDMAC
+             26,   // nRCDEWMUL
+             26,   // nRCDRDAF
+             30,   // nRCDRDCP
              16,   // nRCDWR
+             16,   // nRCDWRCP
              26,   // nRP
              53,   // nRAS
              79,   // nRC
@@ -121,6 +138,7 @@ public:
              1,    // nCWLREG
              1,    // nCWLGB
              1,    // nWPRE
+             32,   // nMODCH
              570   // tCK_ps
          }},
 
@@ -130,7 +148,12 @@ public:
              4,    // nBL
              24,   // nCL
              30,   // nRCDRD
+             30,   // nRCDRDMAC
+             30,   // nRCDEWMUL
+             30,   // nRCDRDAF
+             30,   // nRCDRDCP
              19,   // nRCDWR
+             19,   // nRCDWRCP
              30,   // nRP
              60,   // nRAS
              89,   // nRC
@@ -153,6 +176,7 @@ public:
              1,    // nCWLREG
              1,    // nCWLGB
              1,    // nWPRE
+             32,   // nMODCH
              570   // tCK_ps
          }},
 
@@ -162,7 +186,12 @@ public:
              2,    // nBL (changed 1.25)
              50,   // nCL (changed)
              36,   // nRCDRD (changed)
+             56,   // nRCDRDMAC (changed + 10ns offset)
+             25,   // nRCDEWMUL (changed, calculated based on SDK)
+             86,   // nRCDRDAF (changed + 25ns offset)
+             66,   // nRCDRDCP (changed + 15ns offset)
              28,   // nRCDWR (changed)
+             48,   // nRCDWRCP (changed + 10ns)
              32,   // nRP (changed)
              54,   // nRAS (changed from SIM: RDSBK (opsize=1) = ACT + RD + PRE = nRAS + nRP = nRAS + 32 = 86)
              89,   // nRC (not imported, used only for precharge)
@@ -185,6 +214,7 @@ public:
              1,    // nCWLREG
              1,    // nCWLGB
              1,    // nWPRE
+             32,   // nMODCH
              500   // tCK_ps
          }},
     };
@@ -230,6 +260,7 @@ public:
         "RDAF16",
         "WRMAC16",
         "WRA16",
+        "TMOD",
         "EOC",
         "UNKNOWN"};
 
@@ -258,6 +289,7 @@ public:
                                   {"RDAF16", "channel"},
                                   {"WRMAC16", "channel"},
                                   {"WRA16", "channel"},
+                                  {"TMOD", "channel"},
                                   {"EOC", "channel"},
                               });
 
@@ -287,6 +319,7 @@ public:
                         {"RDAF16", {false, false, false, false}},
                         {"WRMAC16", {false, false, false, false}},
                         {"WRA16", {false, true, true, false}},
+                        {"TMOD", {false, false, false, false}},
                         {"EOC", {false, false, false, false}},
                     });
 
@@ -355,7 +388,12 @@ public:
         "nBL",
         "nCL",
         "nRCDRD",
+        "nRCDRDMAC",
+        "nRCDEWMUL",
+        "nRCDRDAF",
+        "nRCDRDCP",
         "nRCDWR",
+        "nRCDWRCP",
         "nRP",
         "nRAS",
         "nRC",
@@ -378,6 +416,7 @@ public:
         "nCWLREG",
         "nCWLGB",
         "nWPRE",
+        "nMODCH",
         "tCK_ps"};
 
     /************************************************
@@ -637,7 +676,12 @@ private:
         printf("nBL: %d\n", m_timing_vals("nBL"));
         printf("nCL: %d\n", m_timing_vals("nCL"));
         printf("nRCDRD: %d\n", m_timing_vals("nRCDRD"));
+        printf("nRCDRDMAC: %d\n", m_timing_vals("nRCDRDMAC"));
+        printf("nRCDEWMUL: %d\n", m_timing_vals("nRCDEWMUL"));
+        printf("nRCDRDAF: %d\n", m_timing_vals("nRCDRDAF"));
+        printf("nRCDRDCP: %d\n", m_timing_vals("nRCDRDCP"));
         printf("nRCDWR: %d\n", m_timing_vals("nRCDWR"));
+        printf("nRCDWRCP: %d\n", m_timing_vals("nRCDWRCP"));
         printf("nRP: %d\n", m_timing_vals("nRP"));
         printf("nRAS: %d\n", m_timing_vals("nRAS"));
         printf("nRC: %d\n", m_timing_vals("nRC"));
@@ -663,7 +707,7 @@ private:
         printf("nWPRE: %d\n", m_timing_vals("nWPRE"));
         printf("-------------------------------------------------------\n");
 
-        int total_banks = m_organization.count[m_levels["bankgroup"]] * m_organization.count[m_levels["bank"]];
+        // int total_banks = m_organization.count[m_levels["bankgroup"]] * m_organization.count[m_levels["bank"]];
 
         // Set read latency
         m_read_latency = m_timing_vals("nCL") + m_timing_vals("nBL");
@@ -679,13 +723,11 @@ private:
         m_command_latencies("MAC16") = 1;
         m_command_latencies("AF16") = 1;
         m_command_latencies("EWMUL16") = 1;
-        m_command_latencies("WRA16") = m_timing_vals("nCWL") + (total_banks - 1) * m_timing_vals("nCCDL") + m_timing_vals("nRP");
+        m_command_latencies("WRA16") = m_timing_vals("nCWL") + m_timing_vals("nBL") + m_timing_vals("nRP");
         m_command_latencies("EOC") = 1;
 
 // Populate the timing constraints
 #define V(timing) (m_timing_vals(timing))
-        int nCWL16_S = V("nCWL") + (total_banks - 1) * V("nCCDS");
-        int nCWL16_L = V("nCWL") + (total_banks - 1) * V("nCCDL");
         populate_timingcons(this, {
                                       /****************************************************** Channel ******************************************************/
                                       // CAS <-> CAS
@@ -703,20 +745,17 @@ private:
                                       /// AiM commands that transfer data on the bus shared between BGs
                                       /// RD: RDMAC16, RDAF16, MAC, MAC16, and RDCP
                                       /// WR: WRGB, WRMAC16, and WRCP
-                                      {.level = "channel", .preceding = {"RD", "RDA", "MAC", "MAC16", "RDCP"}, .following = {"RD", "RDA", "MAC", "MAC16", "RDCP", "RDMAC16", "RDAF16"}, .latency = V("nCCDS")},
-                                      {.level = "channel", .preceding = {"RDMAC16", "RDAF16"}, .following = {"RD", "RDA", "MAC", "MAC16", "RDCP", "RDMAC16", "RDAF16"}, .latency = total_banks * V("nCCDS")},
-
-                                      {.level = "channel", .preceding = {"WR", "WRA", "WRGB", "WRCP"}, .following = {"WR", "WRA", "WRA16", "WRGB", "WRCP", "WRMAC16"}, .latency = V("nCCDS")},
-                                      {.level = "channel", .preceding = {"WRMAC16", "WRA16"}, .following = {"WR", "WRA", "WRA16", "WRGB", "WRCP", "WRMAC16"}, .latency = total_banks * V("nCCDS")},
+                                      {.level = "channel", .preceding = {"RD", "RDA", "MAC", "MAC16", "RDCP", "RDMAC16", "RDAF16"}, .following = {"RD", "RDA", "MAC", "MAC16", "RDCP", "RDMAC16", "RDAF16"}, .latency = V("nCCDS")},
+                                      {.level = "channel", .preceding = {"WR", "WRA", "WRA16", "WRGB", "WRCP", "WRMAC16"}, .following = {"WR", "WRA", "WRA16", "WRGB", "WRCP", "WRMAC16"}, .latency = V("nCCDS")},
 
                                       /// nCCDL is the minimal latency for column commands that access to the same bank group
                                       /// AiM commands that transfer data on the bus shared inside a BG
                                       /// RD: RDMAC16, RDAF16, MAC, MAC16, and RDCP
                                       /// WR: WRMAC16, and WRCP
-                                      {.level = "channel", .preceding = {"RD", "RDA", "RDMAC16", "RDAF16", "MAC", "MAC16", "RDCP"}, .following = {"RDMAC16", "RDAF16", "MAC16"}, .latency = V("nCCDL")},
-                                      {.level = "channel", .preceding = {"RDMAC16", "RDAF16", "MAC16"}, .following = {"RD", "RDA", "RDMAC16", "RDAF16", "MAC", "MAC16", "RDCP"}, .latency = V("nCCDL")},
-                                      {.level = "channel", .preceding = {"WR", "WRA", "WRA16", "WRMAC16", "WRCP"}, .following = {"WRMAC16", "WRA16"}, .latency = V("nCCDL")},
-                                      {.level = "channel", .preceding = {"WRMAC16", "WRA16"}, .following = {"WR", "WRA", "WRA16", "WRMAC16", "WRCP"}, .latency = V("nCCDL")},
+                                      {.level = "channel", .preceding = {"RD", "RDA", "MAC", "RDCP", "RDMAC16", "RDAF16", "MAC16", "EWMUL16"}, .following = {"RDMAC16", "RDAF16", "MAC16", "EWMUL16"}, .latency = V("nCCDL")},
+                                      {.level = "channel", .preceding = {"RDMAC16", "RDAF16", "MAC16", "EWMUL16"}, .following = {"RD", "RDA", "MAC", "RDCP", "RDMAC16", "RDAF16", "MAC16", "EWMUL16"}, .latency = V("nCCDL")},
+                                      {.level = "channel", .preceding = {"WR", "WRA", "WRCP", "WRA16", "WRMAC16", "EWMUL16"}, .following = {"WRA16", "WRMAC16", "EWMUL16"}, .latency = V("nCCDL")},
+                                      {.level = "channel", .preceding = {"WRA16", "WRMAC16", "EWMUL16"}, .following = {"WR", "WRA", "WRCP", "WRA16", "WRMAC16", "EWMUL16"}, .latency = V("nCCDL")},
 
                                       /// RD <-> WR
                                       /// Minimum Read to Write (READ or RDTR to WRITE or WRTR command delay)
@@ -725,11 +764,13 @@ private:
                                       /// WR: WRGB and WRMAC16
                                       /// The next timing is tRTW
                                       {.level = "channel", .preceding = {"RD", "RDA"}, .following = {"WR", "WRA"}, .latency = V("nCL") + V("nBL") + 3 - V("nCWL") + V("nWPRE")},
-                                      {.level = "channel", .preceding = {"RD", "RDA"}, .following = {"WRA16"}, .latency = V("nCL") + V("nBL") + 3 - nCWL16_S + V("nWPRE")},
-                                      {.level = "channel", .preceding = {"RDMAC16", "RDAF16"}, .following = {"WR", "WRA"}, .latency = total_banks * V("nCLREG") + V("nBL") + 3 - V("nCWL") + V("nWPRE")},
-                                      {.level = "channel", .preceding = {"RDMAC16", "RDAF16"}, .following = {"WRA16"}, .latency = total_banks * V("nCLREG") + V("nBL") + 3 - nCWL16_S + V("nWPRE")},
-                                      {.level = "channel", .preceding = {"RD", "RDA"}, .following = {"WRGB", "WRMAC16"}, .latency = V("nCL") + V("nBL") + 3 - V("nCWLREG") + V("nWPRE")},
-                                      {.level = "channel", .preceding = {"RDMAC16", "RDAF16"}, .following = {"WRGB", "WRMAC16"}, .latency = total_banks * V("nCLREG") + V("nBL") + 3 - V("nCWLREG") + V("nWPRE")},
+                                      {.level = "channel", .preceding = {"RD", "RDA"}, .following = {"WRA16"}, .latency = V("nCL") + V("nBL") + 3 - V("nCWL") + V("nWPRE")},
+                                      {.level = "channel", .preceding = {"RDMAC16", "RDAF16"}, .following = {"WR", "WRA"}, .latency = V("nCLREG") + V("nBL") + 3 - V("nCWL") + V("nWPRE")},
+                                      {.level = "channel", .preceding = {"RDMAC16", "RDAF16"}, .following = {"WRA16"}, .latency = V("nCLREG") + V("nBL") + 3 - V("nCWL") + V("nWPRE")},
+                                      {.level = "channel", .preceding = {"RD", "RDA"}, .following = {"WRGB"}, .latency = V("nCL") + V("nBL") + 3 - V("nCWLGB") + V("nWPRE")},
+                                      {.level = "channel", .preceding = {"RD", "RDA"}, .following = {"WRMAC16"}, .latency = V("nCL") + V("nBL") + 3 - V("nCWLREG") + V("nWPRE")},
+                                      {.level = "channel", .preceding = {"RDMAC16", "RDAF16"}, .following = {"WRGB"}, .latency = V("nCLREG") + V("nBL") + 3 - V("nCWLGB") + V("nWPRE")},
+                                      {.level = "channel", .preceding = {"RDMAC16", "RDAF16"}, .following = {"WRMAC16"}, .latency = V("nCLREG") + V("nBL") + 3 - V("nCWLREG") + V("nWPRE")},
 
                                       /// WR <-> RD
                                       /// Minimum Read after Write
@@ -737,16 +778,16 @@ private:
                                       /// RD: RDMAC16 and RDAF16
                                       /// WR: WRGB and WRMAC16
                                       {.level = "channel", .preceding = {"WR", "WRA"}, .following = {"RD", "RDA", "RDMAC16", "RDAF16"}, .latency = V("nCWL") + V("nBL") + V("nWTRS")},
-                                      {.level = "channel", .preceding = {"WRA16"}, .following = {"RD", "RDA", "RDMAC16", "RDAF16"}, .latency = nCWL16_S + V("nBL") + V("nWTRS")},
-                                      {.level = "channel", .preceding = {"WRGB"}, .following = {"RD", "RDA", "RDMAC16", "RDAF16"}, .latency = V("nCWLREG") + V("nBL") + V("nWTRS")},
-                                      {.level = "channel", .preceding = {"WRMAC16"}, .following = {"RD", "RDA", "RDMAC16", "RDAF16"}, .latency = total_banks * V("nCWLREG") + V("nBL") + V("nWTRS")},
+                                      {.level = "channel", .preceding = {"WRA16"}, .following = {"RD", "RDA", "RDMAC16", "RDAF16"}, .latency = V("nCWL") + V("nBL") + V("nWTRS")},
+                                      {.level = "channel", .preceding = {"WRGB"}, .following = {"RD", "RDA", "RDMAC16", "RDAF16"}, .latency = V("nCWLGB") + V("nBL") + V("nWTRS")},
+                                      {.level = "channel", .preceding = {"WRMAC16"}, .following = {"RD", "RDA", "RDMAC16", "RDAF16"}, .latency = V("nCWLREG") + V("nBL") + V("nWTRS")},
 
                                       /// AiM commands that transfer data on the external bus, based on the bus shared inside a BG
                                       /// RD: RDMAC16 and RDAF16
                                       /// WR: WRMAC16
                                       {.level = "channel", .preceding = {"WR", "WRA"}, .following = {"RDMAC16", "RDAF16"}, .latency = V("nCWL") + V("nBL") + V("nWTRL")},
-                                      {.level = "channel", .preceding = {"WRA16"}, .following = {"RD", "RDA", "RDMAC16", "RDAF16"}, .latency = nCWL16_L + V("nBL") + V("nWTRL")},
-                                      {.level = "channel", .preceding = {"WRMAC16"}, .following = {"RD", "RDA", "RDMAC16", "RDAF16"}, .latency = total_banks * V("nCWLREG") + V("nBL") + V("nWTRL")},
+                                      {.level = "channel", .preceding = {"WRA16"}, .following = {"RD", "RDA", "RDMAC16", "RDAF16"}, .latency = V("nCWL") + V("nBL") + V("nWTRL")},
+                                      {.level = "channel", .preceding = {"WRMAC16"}, .following = {"RD", "RDA", "RDMAC16", "RDAF16"}, .latency = V("nCWLREG") + V("nBL") + V("nWTRL")},
 
                                       // What about the contention of the bus shared between BGs for:
                                       // ("RDCP" -> {"WR", "WRA", "WRA16", "WRGB", "WRMAC16"}) IDK. There is no internal READ to WRITE delay.
@@ -761,8 +802,8 @@ private:
                                       {.level = "channel", .preceding = {"RD", "RDCP", "MAC", "MAC16", "AF16", "EWMUL16"}, .following = {"PREA"}, .latency = V("nRTP")},
                                       {.level = "channel", .preceding = {"MAC16", "AF16", "EWMUL16"}, .following = {"PRE", "PRE4"}, .latency = V("nRTP")},
                                       // "Not based on the GDDR6 document"
-                                      {.level = "channel", .preceding = {"WR", "WRCP", "EWMUL16"}, .following = {"PREA"}, .latency = V("nCWL") + V("nBL") + V("nWR")}, // Not sure if we have to consider nBL for WRCP or EWMUL16
-                                      {.level = "channel", .preceding = {"EWMUL16"}, .following = {"PRE", "PRE4"}, .latency = V("nCWL") + V("nBL") + V("nWR")},        // Not sure if we have to consider nBL for WRCP or EWMUL16
+                                      {.level = "channel", .preceding = {"WR", "WRCP"}, .following = {"PREA"}, .latency = V("nCWL") + V("nBL") + V("nWR")},  // Not sure if we have to consider nBL for WRCP or EWMUL16
+                                      {.level = "channel", .preceding = {"EWMUL16"}, .following = {"PRE", "PRE4", "PREA"}, .latency = V("nCWL") + V("nWR")}, // Not sure if we have to consider nBL for WRCP or EWMUL16
 
                                       /// RAS <-> RAS
                                       // "ACTIVATE to ACTIVATE in a different bank group"
@@ -779,14 +820,19 @@ private:
                                       {.level = "channel", .preceding = {"PRE", "PRE4", "PREA"}, .following = {"ACT16"}, .latency = V("nRP")},
                                       {.level = "channel", .preceding = {"PREA"}, .following = {"ACT", "ACT4", "ACT16"}, .latency = V("nRP")},
                                       // "An ACTIVATE (ACT) command is required to be issued before the READ command to the same bank, and tRCDRD must be met."
-                                      {.level = "channel", .preceding = {"ACT", "ACT4", "ACT16"}, .following = {"MAC16", "AF16", "EWMUL16"}, .latency = V("nRCDRD")},
-                                      {.level = "channel", .preceding = {"ACT16"}, .following = {"RD", "RDA", "RDCP", "MAC", "MAC16", "AF16", "EWMUL16"}, .latency = V("nRCDRD")},
+                                      {.level = "channel", .preceding = {"ACT", "ACT4", "ACT16"}, .following = {"MAC16"}, .latency = V("nRCDRDMAC")},
+                                      {.level = "channel", .preceding = {"ACT", "ACT4", "ACT16"}, .following = {"AF16"}, .latency = V("nRCDRDAF")},
+                                      {.level = "channel", .preceding = {"ACT", "ACT4", "ACT16"}, .following = {"EWMUL16"}, .latency = V("nRCDEWMUL")},
+                                      {.level = "channel", .preceding = {"ACT16"}, .following = {"MAC"}, .latency = V("nRCDRDMAC")},
+                                      {.level = "channel", .preceding = {"ACT16"}, .following = {"RDCP"}, .latency = V("nRCDRDCP")},
+                                      {.level = "channel", .preceding = {"ACT16"}, .following = {"RD", "RDA"}, .latency = V("nRCDRD")},
                                       // "An ACTIVATE (ACT) command is required to be issued before the WRITE command to the same bank, and tRCDWR must be met."
-                                      {.level = "channel", .preceding = {"ACT", "ACT4", "ACT16"}, .following = {"EWMUL16", "WRA16"}, .latency = V("nRCDWR")},
-                                      {.level = "channel", .preceding = {"ACT16"}, .following = {"WR", "WRA", "WRCP", "EWMUL16"}, .latency = V("nRCDWR")},
+                                      {.level = "channel", .preceding = {"ACT", "ACT4", "ACT16"}, .following = {"WRA16"}, .latency = V("nRCDWR")},
+                                      {.level = "channel", .preceding = {"ACT16"}, .following = {"WRCP"}, .latency = V("nRCDWRCP")},
+                                      {.level = "channel", .preceding = {"ACT16"}, .following = {"WR", "WRA"}, .latency = V("nRCDWR")},
                                       {.level = "channel", .preceding = {"RDA"}, .following = {"ACT16"}, .latency = V("nRTP") + V("nRP")},
                                       {.level = "channel", .preceding = {"WRA"}, .following = {"ACT16"}, .latency = V("nCWL") + V("nBL") + V("nWR") + V("nRP")},
-                                      {.level = "channel", .preceding = {"WRA16"}, .following = {"ACT", "ACT4", "ACT16"}, .latency = nCWL16_L + V("nBL") + V("nWR") + V("nRP")},
+                                      {.level = "channel", .preceding = {"WRA16"}, .following = {"ACT", "ACT4", "ACT16"}, .latency = V("nCWL") + V("nBL") + V("nWR") + V("nRP")},
 
                                       /// RAS <-> REF
                                       // "All banks must be precharged prior to the REFab command."
@@ -794,7 +840,7 @@ private:
                                       {.level = "channel", .preceding = {"PRE", "PRE4", "PREA"}, .following = {"REFab"}, .latency = V("nRP")},
                                       {.level = "channel", .preceding = {"RDA"}, .following = {"REFab"}, .latency = V("nRTP") + V("nRP")},
                                       {.level = "channel", .preceding = {"WRA"}, .following = {"REFab"}, .latency = V("nCWL") + V("nBL") + V("nWR") + V("nRP")},
-                                      {.level = "channel", .preceding = {"WRA16"}, .following = {"REFpb", "REFab"}, .latency = V("nCWL") + V("nBL") + total_banks * V("nWR") + V("nRP")},
+                                      {.level = "channel", .preceding = {"WRA16"}, .following = {"REFpb", "REFab"}, .latency = V("nCWL") + V("nBL") + V("nWR") + V("nRP")},
                                       // "A minimum time tRFCab is required between two REFab commands. The same rule applies to any access command after the refresh operation."
                                       {.level = "channel", .preceding = {"REFab"}, .following = {"ACT", "ACT4", "ACT16"}, .latency = V("nRFC")},
 
@@ -811,6 +857,8 @@ private:
 
                                       {.level = "channel", .preceding = {"PREA"}, .following = {"PRE", "PRE4", "PREA"}, .latency = V("nRP")},
                                       {.level = "channel", .preceding = {"PRE", "PRE4"}, .following = {"PREA"}, .latency = V("nRP")},
+
+                                      {.level = "channel", .preceding = {"TMOD"}, .following = {"ACT", "PREA", "PRE", "RD", "WR", "RDA", "WRA", "REFab", "REFpb", "ACT4", "ACT16", "PRE4", "MAC", "MAC16", "AF16", "EWMUL16", "RDCP", "WRCP", "WRGB", "RDMAC16", "RDAF16", "WRMAC16", "WRA16", "EOC"}, .latency = V("nMODCH")},
 
                                       /****************************************************** Bank Group ******************************************************/
                                       /// CAS <-> CAS
@@ -860,9 +908,12 @@ private:
 
                                       /// CAS <-> RAS
                                       // "An ACTIVATE (ACT) command is required to be issued before the READ command to the same bank, and tRCDRD must be met."
-                                      {.level = "bankgroup", .preceding = {"ACT4"}, .following = {"RD", "RDA", "RDCP", "MAC"}, .latency = V("nRCDRD")},
+                                      {.level = "bankgroup", .preceding = {"ACT4"}, .following = {"MAC"}, .latency = V("nRCDRDMAC")},
+                                      {.level = "bankgroup", .preceding = {"ACT4"}, .following = {"RDCP"}, .latency = V("nRCDRDCP")},
+                                      {.level = "bankgroup", .preceding = {"ACT4"}, .following = {"RD", "RDA"}, .latency = V("nRCDRD")},
                                       // "An ACTIVATE (ACT) command is required to be issued before the WRITE command to the same bank, and tRCDWR must be met."
-                                      {.level = "bankgroup", .preceding = {"ACT4"}, .following = {"WR", "WRA", "WRCP"}, .latency = V("nRCDWR")},
+                                      {.level = "bankgroup", .preceding = {"ACT4"}, .following = {"WRCP"}, .latency = V("nRCDWRCP")},
+                                      {.level = "bankgroup", .preceding = {"ACT4"}, .following = {"WR", "WRA"}, .latency = V("nRCDWR")},
 
                                       {.level = "channel", .preceding = {"PRE4"}, .following = {"PRE", "PRE4"}, .latency = V("nRP")},
                                       {.level = "channel", .preceding = {"PRE"}, .following = {"PRE4"}, .latency = V("nRP")},
@@ -870,9 +921,12 @@ private:
                                       /****************************************************** Bank ******************************************************/
                                       /// CAS <-> RAS
                                       // "An ACTIVATE (ACT) command is required to be issued before the READ command to the same bank, and tRCDRD must be met."
-                                      {.level = "bank", .preceding = {"ACT"}, .following = {"RD", "RDA", "RDCP", "MAC"}, .latency = V("nRCDRD")},
+                                      {.level = "bank", .preceding = {"ACT"}, .following = {"MAC"}, .latency = V("nRCDRDMAC")},
+                                      {.level = "bank", .preceding = {"ACT"}, .following = {"RDCP"}, .latency = V("nRCDRDCP")},
+                                      {.level = "bank", .preceding = {"ACT"}, .following = {"RD", "RDA"}, .latency = V("nRCDRD")},
                                       // "An ACTIVATE (ACT) command is required to be issued before the WRITE command to the same bank, and tRCDWR must be met."
-                                      {.level = "bank", .preceding = {"ACT"}, .following = {"WR", "WRA", "WRCP"}, .latency = V("nRCDWR")},
+                                      {.level = "bank", .preceding = {"ACT"}, .following = {"WRCP"}, .latency = V("nRCDWRCP")},
+                                      {.level = "bank", .preceding = {"ACT"}, .following = {"WR", "WRA"}, .latency = V("nRCDWR")},
 
                                       /// RAS <-> RAS
                                       // "A minimum time, tRAS, must have elapsed between opening and closing a row."

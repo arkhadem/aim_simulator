@@ -14,9 +14,8 @@ bool Request::is_reader() {
             (AiMISRInfo::convert_AiM_opcode_to_AiM_ISR(opcode).AiM_DMA_blocking == true));
 }
 
-const char *Request::c_str() {
+std::string Request::str() {
     std::stringstream req_stream;
-    char *name = new char[1024];
     if (type == Type::AIM) {
         req_stream << "Request[Type(" << AiMISRInfo::convert_AiM_opcode_to_str(opcode) << "), ";
         if (opsize != -1)
@@ -70,8 +69,7 @@ const char *Request::c_str() {
     }
     req_stream << "]";
 
-    strcpy(name, req_stream.str().c_str());
-    return name;
+    return req_stream.str();
 }
 
 } // namespace Ramulator

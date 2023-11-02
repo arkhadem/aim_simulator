@@ -72,7 +72,7 @@ protected:
     void apply_addr_mapp(Request &req, int channel_id) {
         req.addr_vec.resize(5, -1);
         if ((channel_id < 0) || (channel_id >= MAX_CHANNEL_COUNT)) {
-            printf("Error: %s has CH more than %d!\n", req.c_str(), MAX_CHANNEL_COUNT);
+            m_logger->error("{} has CH more than {}!", req.str(), MAX_CHANNEL_COUNT);
             exit(-1);
         }
         req.addr_vec[0] = channel_id;
@@ -81,7 +81,7 @@ protected:
             req.addr_vec[2] = -1;
         } else {
             if ((req.bank_index < 0) || (req.bank_index >= 16)) {
-                printf("Error: %s has BA more than 16!\n", req.c_str());
+                m_logger->error("{} has BA more than 16!", req.str());
                 exit(-1);
             }
             req.addr_vec[1] = req.bank_index / 4;
@@ -169,7 +169,7 @@ public:
             return false;
         }
         request_queue.push(req);
-        m_logger->info("[CLK {}] {} pushed to the queue!", m_clk, req.c_str());
+        m_logger->info("[CLK {}] {} pushed to the queue!", m_clk, req.str());
 
         switch (req.type) {
         case Type::AIM: {
@@ -215,7 +215,7 @@ public:
                 }
             } else if (request_queue.empty() == false) {
                 Request host_req = request_queue.front();
-                m_logger->info("[CLK {}] Decoding {}...", m_clk, host_req.c_str());
+                m_logger->info("[CLK {}] Decoding {}...", m_clk, host_req.str());
                 bool all_AiM_requests_sent = true;
 
                 switch (host_req.type) {
@@ -289,7 +289,7 @@ public:
                                 aim_req.AiM_req_id = AiM_req_id++;
                                 aim_req.host_req_id = host_req.host_req_id;
                                 apply_addr_mapp(aim_req, channel_id);
-                                m_logger->info("[CLK {}] 1- Sending {} to channel {}", m_clk, aim_req.c_str(), channel_id);
+                                m_logger->info("[CLK {}] 1- Sending {} to channel {}", m_clk, aim_req.str(), channel_id);
                                 assert(channel_id < m_controllers.size());
                                 assert(channel_id < MAX_CHANNEL_COUNT);
                                 if (m_controllers[channel_id]->send(aim_req) == false) {
@@ -321,7 +321,7 @@ public:
                         for (int channel_id = 0; channel_id < m_controllers.size(); channel_id++) {
                             aim_req.AiM_req_id = AiM_req_id++;
                             aim_req.host_req_id = host_req.host_req_id;
-                            m_logger->info("[CLK {}] 2- Sending {} to channel {}", m_clk, aim_req.c_str(), channel_id);
+                            m_logger->info("[CLK {}] 2- Sending {} to channel {}", m_clk, aim_req.str(), channel_id);
                             if (m_controllers[channel_id]->send(aim_req) == false) {
                                 remaining_AiM_requests[channel_id].push(aim_req);
                                 all_AiM_requests_sent = false;
@@ -332,7 +332,7 @@ public:
                     } break;
 
                     default:
-                        printf("unknown command \n");
+                        m_logger->error("unknown command \n");
                         break;
                     }
                 } break;
@@ -354,7 +354,7 @@ public:
                         aim_req.AiM_req_id = AiM_req_id++;
                         apply_addr_mapp(aim_req, aim_req.channel_mask);
                         int channel_id = aim_req.addr_vec[0];
-                        m_logger->info("[CLK {}] 3- Sending {} to channel {}", m_clk, aim_req.c_str(), channel_id);
+                        m_logger->info("[CLK {}] 3- Sending {} to channel {}", m_clk, aim_req.str(), channel_id);
                         if (m_controllers[channel_id]->send(aim_req) == false) {
                             remaining_AiM_requests[channel_id].push(aim_req);
                             all_AiM_requests_sent = false;
@@ -389,13 +389,13 @@ public:
                         aim_req.AiM_req_id = AiM_req_id++;
                         apply_addr_mapp(aim_req, aim_req.channel_mask);
                         int channel_id = aim_req.addr_vec[0];
-                        m_logger->info("[CLK {}] 4- Sending {} to channel {}, channel_mask {}", m_clk, aim_req.c_str(), channel_id, aim_req.channel_mask);
+                        m_logger->info("[CLK {}] 4- Sending {} to channel {}, channel_mask {}", m_clk, aim_req.str(), channel_id, aim_req.channel_mask);
                         if (m_controllers[channel_id]->send(aim_req) == false) {
                             remaining_AiM_requests[channel_id].push(aim_req);
                             all_AiM_requests_sent = false;
-                            m_logger->info("[CLK {}] 4- failed", aim_req.c_str(), m_clk, channel_id, aim_req.channel_mask);
+                            m_logger->info("[CLK {}] 4- failed", aim_req.str(), m_clk, channel_id, aim_req.channel_mask);
                         } else {
-                            m_logger->info("[CLK {}] 4- sent", aim_req.c_str(), m_clk, channel_id, aim_req.channel_mask);
+                            m_logger->info("[CLK {}] 4- sent", aim_req.str(), m_clk, channel_id, aim_req.channel_mask);
                         }
                         break;
                     }

@@ -139,7 +139,7 @@ struct Request {
     Request(Addr_t addr, int type_id, int source_id, std::function<void(Request &)> callback);
     // Request(Request const &req);
 
-    const char *c_str();
+    std::string str();
 
     bool is_reader();
 };
@@ -173,11 +173,13 @@ public:
            std::vector<Field> legal_fields_ = {},
            bool channel_count_eq_one_ = false,
            bool AiM_DMA_blocking_ = false,
+           bool require_reg_RW_mod_ = false,
            std::string target_level_ = "")
         : opcode(opcode_),
           legal_fields(legal_fields_),
           channel_count_eq_one(channel_count_eq_one_),
           AiM_DMA_blocking(AiM_DMA_blocking_),
+          require_reg_RW_mod(require_reg_RW_mod_),
           target_level(target_level_) {}
 
     Opcode opcode;
@@ -186,6 +188,7 @@ public:
 
     bool channel_count_eq_one;
     bool AiM_DMA_blocking;
+    bool require_reg_RW_mod;
 
     std::string target_level;
 
@@ -221,6 +224,7 @@ public:
                                                       AiMISR::Field::row_addr},
                                                      true,    // channel_count_eq_one
                                                      false,   // AiM_DMA_blocking
+                                                     false,   // require_reg_RW_mod
                                                      "column" // target_level
         );
 
@@ -231,6 +235,7 @@ public:
                                                       AiMISR::Field::row_addr},
                                                      true,    // channel_count_eq_one
                                                      false,   // AiM_DMA_blocking
+                                                     false,   // require_reg_RW_mod
                                                      "column" // target_level
         );
 
@@ -243,6 +248,7 @@ public:
                                                     },
                                                     false,    // channel_count_eq_one
                                                     false,    // AiM_DMA_blocking
+                                                    true,     // require_reg_RW_mod
                                                     "channel" // target_level
         );
 
@@ -254,6 +260,7 @@ public:
                                                       },
                                                       false, // channel_count_eq_one
                                                       false, // AiM_DMA_blocking
+                                                      true,  // require_reg_RW_mod
                                                       "bank" // target_level
         );
 
@@ -264,6 +271,7 @@ public:
                                                        },
                                                        false,   // channel_count_eq_one
                                                        false,   // AiM_DMA_blocking
+                                                       false,   // require_reg_RW_mod
                                                        "column" // target_level
         );
 
@@ -275,6 +283,7 @@ public:
                                                      },
                                                      false, // channel_count_eq_one
                                                      true,  // AiM_DMA_blocking
+                                                     true,  // require_reg_RW_mod
                                                      "bank" // target_level
         );
 
@@ -286,6 +295,7 @@ public:
                                                     },
                                                     false, // channel_count_eq_one
                                                     true,  // AiM_DMA_blocking
+                                                    true,  // require_reg_RW_mod
                                                     "bank" // target_level
         );
 
@@ -300,6 +310,7 @@ public:
                                                      },
                                                      true,    // channel_count_eq_one
                                                      true,    // AiM_DMA_blocking
+                                                     false,   // require_reg_RW_mod
                                                      "column" // target_level
         );
 
@@ -313,6 +324,7 @@ public:
                                                         },
                                                         false,   // channel_count_eq_one
                                                         false,   // AiM_DMA_blocking
+                                                        false,   // require_reg_RW_mod
                                                         "column" // target_level
         );
 
@@ -326,6 +338,7 @@ public:
                                                         },
                                                         false,   // channel_count_eq_one
                                                         false,   // AiM_DMA_blocking
+                                                        false,   // require_reg_RW_mod
                                                         "column" // target_level
         );
 
@@ -339,6 +352,7 @@ public:
                                                       },
                                                       false, // channel_count_eq_one
                                                       false, // AiM_DMA_blocking
+                                                      false, // require_reg_RW_mod
                                                       "bank" // target_level
         );
 
@@ -351,6 +365,7 @@ public:
                                                       },
                                                       false, // channel_count_eq_one
                                                       false, // AiM_DMA_blocking
+                                                      false, // require_reg_RW_mod
                                                       "bank" // target_level
         );
 
@@ -361,6 +376,7 @@ public:
                                                  },
                                                  false, // channel_count_eq_one
                                                  false, // AiM_DMA_blocking
+                                                 false, // require_reg_RW_mod
                                                  "bank" // target_level
         );
 
@@ -373,6 +389,7 @@ public:
                                                     },
                                                     false,   // channel_count_eq_one
                                                     false,   // AiM_DMA_blocking
+                                                    false,   // require_reg_RW_mod
                                                     "column" // target_level
         );
 
@@ -383,6 +400,7 @@ public:
                                                      AiMISR::Field::GPR_addr_1},
                                                     false, // channel_count_eq_one
                                                     false, // AiM_DMA_blocking
+                                                    false, // require_reg_RW_mod
                                                     "DMA"  // target_level
         );
 
@@ -391,6 +409,7 @@ public:
                                                   {},
                                                   false, // channel_count_eq_one
                                                   true,  // AiM_DMA_blocking
+                                                  false, // require_reg_RW_mod
                                                   "DMA"  // target_level
         );
 
@@ -525,6 +544,10 @@ public:
             exit(-1);
         }
         return mem_access_region_to_str[mem_access_region];
+    }
+
+    static bool opcode_requires_reg_RW_mod(Opcode AiM_opcode) {
+        return convert_AiM_opcode_to_AiM_ISR(AiM_opcode).require_reg_RW_mod;
     }
 };
 

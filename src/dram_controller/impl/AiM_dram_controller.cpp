@@ -35,6 +35,8 @@ private:
     std::map<Opcode, int> s_num_AiM_cycles;
     int s_num_idle_cycles = 0;
 
+    bool is_reg_RW_mode = false;
+
 public:
     void init() override {
         m_wr_low_watermark = param<float>("wr_low_watermark").desc("Threshold for switching back to read mode.").default_val(0.2f);
@@ -173,8 +175,21 @@ public:
                 buffer->remove(req_it);
                 m_logger->info("[CLK {}] EOC ready for callback", m_clk);
             } else {
+
+                bool requires_reg_RW_mode = false;
+                if (req_it->type == Type::AIM) {
+                    if (AiMISRInfo::opcode_requires_reg_RW_mod(req_it->opcode)) {
+                        requires_reg_RW_mode = true;
+                    }
+                }
+
+                if (requires_reg_RW_mode ^ is_reg_RW_mode) {
+                    req_it->command = m_dram->m_commands("TMOD");
+                    is_reg_RW_mode = !is_reg_RW_mode;
+                }
+
                 // If we find a real request to serve
-                m_logger->info("[CLK {}] Issuing {} for {}", m_clk, std::string(m_dram->m_commands(req_it->command)).c_str(), req_it->c_str());
+                m_logger->info("[CLK {}] Issuing {} for {}", m_clk, std::string(m_dram->m_commands(req_it->command)).c_str(), req_it->str());
                 if (req_it->issue == -1)
                     req_it->issue = m_clk - 1;
                 m_dram->issue_command(req_it->command, req_it->addr_vec);
@@ -230,10 +245,10 @@ private:
                 if ((req.opcode != Opcode::ISR_EOC) || (pending_writes.size() == 0)) {
                     if (req.callback) {
                         // If the request comes from outside (e.g., processor), call its callback
-                        m_logger->info("[CLK {}] Calling back {}!", m_clk, req.c_str());
+                        m_logger->info("[CLK {}] Calling back {}!", m_clk, req.str());
                         req.callback(req);
                     } else {
-                        m_logger->info("[CLK {}] Warning: {} doesn't have callback set but it is in the pending_reads queue!", m_clk, req.c_str());
+                        m_logger->info("[CLK {}] Warning: {} doesn't have callback set but it is in the pending_reads queue!", m_clk, req.str());
                     }
                     // Finally, r emove this request from the pending_reads queue
                     pending_reads.pop_front();
@@ -244,7 +259,7 @@ private:
         while (write_req_it != pending_writes.end()) {
             if (write_req_it->depart <= m_clk) {
                 // Remove this write request
-                m_logger->info("[CLK {}] Finished {}!", m_clk, write_req_it->c_str());
+                m_logger->info("[CLK {}] Finished {}!", m_clk, write_req_it->str());
                 write_req_it = pending_writes.erase(write_req_it);
             } else {
                 ++write_req_it;

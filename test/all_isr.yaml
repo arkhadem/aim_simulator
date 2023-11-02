@@ -1,7 +1,6 @@
 Frontend:
   impl: AiMTrace
   clock_ratio: 1
-  path: ./test/all_isr.csv
   delimiter: ","
 
   Translation:
