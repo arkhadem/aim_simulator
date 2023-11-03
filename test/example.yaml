@@ -20,6 +20,7 @@ MemorySystem:
 
   Controller:
     impl: AiM
+    clock_ratio: 8
     Scheduler:
       impl: FRFCFS
     RefreshManager:

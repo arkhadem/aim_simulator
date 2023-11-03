@@ -41,6 +41,7 @@ public:
     void init() override {
         m_wr_low_watermark = param<float>("wr_low_watermark").desc("Threshold for switching back to read mode.").default_val(0.2f);
         m_wr_high_watermark = param<float>("wr_high_watermark").desc("Threshold for switching to write mode.").default_val(0.8f);
+        m_clock_ratio = param<uint>("clock_ratio").required();
 
         m_scheduler = create_child_ifce<IScheduler>();
         m_refresh = create_child_ifce<IRefreshManager>();

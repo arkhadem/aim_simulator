@@ -419,11 +419,14 @@ public:
             }
         }
 
-        m_clk++;
-        m_dram->tick();
-        for (auto controller : m_controllers) {
-            controller->tick();
+        if (m_clk % m_controllers[0]->get_clock_ratio() == 0) {
+            m_dram->tick();
+            for (auto controller : m_controllers) {
+                controller->tick();
+            }
         }
+
+        m_clk++;
     };
 
     void receive(Request &req) {

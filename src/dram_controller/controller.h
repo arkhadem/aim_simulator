@@ -24,6 +24,7 @@ public:
     IRefreshManager *m_refresh = nullptr;
 
     int m_channel_id = -1;
+    uint m_clock_ratio;
 
 public:
     /**
@@ -46,6 +47,8 @@ public:
      * 
      */
     virtual void tick() = 0;
+
+    uint get_clock_ratio() { return m_clock_ratio; };
 };
 
 } // namespace Ramulator
