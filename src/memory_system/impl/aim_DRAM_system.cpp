@@ -365,7 +365,7 @@ public:
                     }
                     case MemAccessRegion::MEM: {
                         Request aim_req = host_req;
-                        aim_req.callback = callback;
+                        // aim_req.callback = callback;
                         aim_req.AiM_req_id = AiM_req_id++;
                         apply_addr_mapp(aim_req, aim_req.channel_mask);
                         int channel_id = aim_req.addr_vec[0];
