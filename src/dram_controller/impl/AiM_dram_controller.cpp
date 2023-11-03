@@ -170,11 +170,11 @@ public:
 
         // 4. Finally, issue the commands to serve the request
         if (request_found) {
-            if (req_it->opcode == Opcode::ISR_EOC) {
+            if ((req_it->opcode == Opcode::ISR_EOC) || (req_it->opcode == Opcode::ISR_SYNC)) {
                 req_it->depart = m_clk;
                 pending_reads.push_back(*req_it);
                 buffer->remove(req_it);
-                m_logger->info("[CLK {}] EOC ready for callback", m_clk);
+                m_logger->info("[CLK {}] EOC/SYNC ready for callback", m_clk);
             } else {
 
                 bool requires_reg_RW_mode = false;
@@ -243,7 +243,9 @@ private:
             if (req.depart <= m_clk) {
                 // Request received data from dram
 
-                if ((req.opcode != Opcode::ISR_EOC) || (pending_writes.size() == 0)) {
+                if (((req.opcode != Opcode::ISR_EOC) && (req.opcode != Opcode::ISR_SYNC)) ||
+                    (pending_writes.size() == 0)) {
+
                     if (req.callback) {
                         // If the request comes from outside (e.g., processor), call its callback
                         m_logger->info("[CLK {}] Calling back {}!", m_clk, req.str());
@@ -316,7 +318,7 @@ private:
             if (!request_found) {
                 if (m_aim_buffer.size() != 0) {
                     req_it = m_aim_buffer.begin();
-                    if (req_it->opcode == Opcode::ISR_EOC) {
+                    if ((req_it->opcode == Opcode::ISR_EOC) || (req_it->opcode == Opcode::ISR_SYNC)) {
                         req_buffer = &m_aim_buffer;
                         return true;
                     } else {

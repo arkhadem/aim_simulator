@@ -316,6 +316,21 @@ public:
                         break;
                     }
 
+                    case Opcode::ISR_SYNC: {
+                        aim_req.callback = callback;
+                        for (int channel_id = 0; channel_id < m_controllers.size(); channel_id++) {
+                            aim_req.AiM_req_id = AiM_req_id++;
+                            aim_req.host_req_id = host_req.host_req_id;
+                            m_logger->info("[CLK {}] 2- Sending {} to channel {}", m_clk, aim_req.str(), channel_id);
+                            if (m_controllers[channel_id]->send(aim_req) == false) {
+                                remaining_AiM_requests[channel_id].push(aim_req);
+                                all_AiM_requests_sent = false;
+                            }
+                            stalled_AiM_requests += 1;
+                        }
+                        break;
+                    } break;
+
                     case Opcode::ISR_EOC: {
                         aim_req.callback = callback;
                         for (int channel_id = 0; channel_id < m_controllers.size(); channel_id++) {
@@ -359,7 +374,7 @@ public:
                             remaining_AiM_requests[channel_id].push(aim_req);
                             all_AiM_requests_sent = false;
                         }
-                        stalled_AiM_requests += 1;
+                        // stalled_AiM_requests += 1;
                         break;
                     }
                     default: {

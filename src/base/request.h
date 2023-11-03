@@ -50,7 +50,8 @@ enum class Opcode {
     ISR_EWADD = 14,    // Element wise multiplication between 2 GPR addresses
     ISR_WR_ABK = 15,   // Write [16 x 16 bits] from [GPR * 32] to [16 banks] of channel [#channel_address]
     ISR_EOC = 16,      // End of compute for the current kernel
-    MAX = 17
+    ISR_SYNC = 17,
+    MAX = 18
     // ISR_WR_HBK,    // [NOT_IMPLEMENTED] Write data from [GPR] to [8 banks]
     // ISR_WR_ABK,    // [NOT_IMPLEMENTED] Write data from [GPR] to [all banks]
     // ISR_WR_GPR,    // [NOT_IMPLEMENTED] Write data from [host] to [GPR]
@@ -402,6 +403,15 @@ public:
                                                     false, // AiM_DMA_blocking
                                                     false, // require_reg_RW_mod
                                                     "DMA"  // target_level
+        );
+
+        aim_opcode_to_str[Opcode::ISR_SYNC] = "ISR_SYNC";
+        opcode_str_to_aim_ISR["ISR_SYNC"] = AiMISR(Opcode::ISR_SYNC,
+                                                   {},
+                                                   false,    // channel_count_eq_one
+                                                   true,     // AiM_DMA_blocking
+                                                   false,    // require_reg_RW_mod
+                                                   "channel" // target_level
         );
 
         aim_opcode_to_str[Opcode::ISR_EOC] = "ISR_EOC";

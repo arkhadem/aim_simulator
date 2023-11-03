@@ -261,6 +261,7 @@ public:
         "WRMAC16",
         "WRA16",
         "TMOD",
+        "SYNC",
         "EOC",
         "UNKNOWN"};
 
@@ -290,6 +291,7 @@ public:
                                   {"WRMAC16", "channel"},
                                   {"WRA16", "channel"},
                                   {"TMOD", "channel"},
+                                  {"SYNC", "channel"},
                                   {"EOC", "channel"},
                               });
 
@@ -320,6 +322,7 @@ public:
                         {"WRMAC16", {false, false, false, false}},
                         {"WRA16", {false, true, true, false}},
                         {"TMOD", {false, false, false, false}},
+                        {"SYNC", {false, false, false, false}},
                         {"EOC", {false, false, false, false}},
                     });
 
@@ -346,6 +349,7 @@ public:
         "ISR_EWMUL",
         "ISR_EWADD",
         "ISR_WR_ABK",
+        "ISR_SYNC",
         "ISR_EOC",
         "MAX"};
 
@@ -375,6 +379,7 @@ public:
                                         {"ISR_EWMUL", "EWMUL16"},    // 14 - EWMUL16 all banks or 1 bank group
                                         {"ISR_EWADD", "UNKNOWN"},    // 15 - Unknown and illegal
                                         {"ISR_WR_ABK", "WRA16"},     // 1 - Write single bank
+                                        {"ISR_SYNC", "SYNC"},        // 16 - Unknown and illegal
                                         {"ISR_EOC", "EOC"},          // 16 - Unknown and illegal
                                         {"MAX", "UNKNOWN"},          // 17 - Unknown and illegal
                                     });
@@ -724,6 +729,7 @@ private:
         m_command_latencies("AF16") = 1;
         m_command_latencies("EWMUL16") = 1;
         m_command_latencies("WRA16") = m_timing_vals("nCWL") + m_timing_vals("nBL") + m_timing_vals("nRP");
+        m_command_latencies("SYNC") = 1;
         m_command_latencies("EOC") = 1;
 
 // Populate the timing constraints
@@ -858,7 +864,7 @@ private:
                                       {.level = "channel", .preceding = {"PREA"}, .following = {"PRE", "PRE4", "PREA"}, .latency = V("nRP")},
                                       {.level = "channel", .preceding = {"PRE", "PRE4"}, .following = {"PREA"}, .latency = V("nRP")},
 
-                                      {.level = "channel", .preceding = {"TMOD"}, .following = {"ACT", "PREA", "PRE", "RD", "WR", "RDA", "WRA", "REFab", "REFpb", "ACT4", "ACT16", "PRE4", "MAC", "MAC16", "AF16", "EWMUL16", "RDCP", "WRCP", "WRGB", "RDMAC16", "RDAF16", "WRMAC16", "WRA16", "EOC"}, .latency = V("nMODCH")},
+                                      {.level = "channel", .preceding = {"TMOD"}, .following = {"ACT", "PREA", "PRE", "RD", "WR", "RDA", "WRA", "REFab", "REFpb", "ACT4", "ACT16", "PRE4", "MAC", "MAC16", "AF16", "EWMUL16", "RDCP", "WRCP", "WRGB", "RDMAC16", "RDAF16", "WRMAC16", "WRA16", "SYNC", "EOC"}, .latency = V("nMODCH")},
 
                                       /****************************************************** Bank Group ******************************************************/
                                       /// CAS <-> CAS
