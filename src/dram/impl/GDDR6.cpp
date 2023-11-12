@@ -473,6 +473,7 @@ public:
         m_channels[channel_id]->update_timing(command, addr_vec, m_clk);
         m_channels[channel_id]->update_states(command, addr_vec, m_clk);
         switch (command) {
+        case m_commands["WRA16"]:
         case m_commands["PREA"]: {
             m_open_rows[channel_id] = 0;
             break;
@@ -484,7 +485,9 @@ public:
             }
             break;
         }
-        case m_commands["PRE"]: {
+        case m_commands["PRE"]:
+        case m_commands["RDA"]:
+        case m_commands["WRA"]: {
             int bank_id = addr_vec[m_levels["bank"]];
             m_open_rows[channel_id] &= ~((uint16_t)(1 << bank_id));
             break;
