@@ -136,8 +136,7 @@ public:
     IDRAM::m_aim_request_translations = m_aim_request_translations; \
     IDRAM::m_states = m_states;                                     \
     IDRAM::m_init_states = m_init_states;                           \
-    IDRAM::m_timings = m_timings;                                   \
-    IDRAM::m_open_rows = m_open_rows;
+    IDRAM::m_timings = m_timings;
 
 } // namespace Ramulator
 

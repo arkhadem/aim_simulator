@@ -445,8 +445,6 @@ public:
     };
     std::vector<Node *> m_channels;
 
-    std::vector<uint16_t> m_open_rows;
-
     FuncMatrix<ActionFunc_t<Node>> m_actions;
     FuncMatrix<PreqFunc_t<Node>> m_preqs;
     FuncMatrix<RowhitFunc_t<Node>> m_rowhits;
