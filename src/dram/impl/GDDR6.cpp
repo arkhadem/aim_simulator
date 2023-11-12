@@ -445,6 +445,8 @@ public:
     };
     std::vector<Node *> m_channels;
 
+    std::vector<uint16_t> m_open_rows;
+
     FuncMatrix<ActionFunc_t<Node>> m_actions;
     FuncMatrix<PreqFunc_t<Node>> m_preqs;
     FuncMatrix<RowhitFunc_t<Node>> m_rowhits;
@@ -472,6 +474,40 @@ public:
         int channel_id = addr_vec[m_levels["channel"]];
         m_channels[channel_id]->update_timing(command, addr_vec, m_clk);
         m_channels[channel_id]->update_states(command, addr_vec, m_clk);
+        switch (command) {
+        case m_commands["PREA"]: {
+            m_open_rows[channel_id] = 0;
+            break;
+        }
+        case m_commands["PRE4"]: {
+            int bankgroup_id = addr_vec[m_levels["bankgroup"]];
+            for (int bank_id = bankgroup_id * 4; bank_id < (bankgroup_id + 1) * 4; bank_id++) {
+                m_open_rows[channel_id] &= ~((uint16_t)(1 << bank_id));
+            }
+            break;
+        }
+        case m_commands["PRE"]: {
+            int bank_id = addr_vec[m_levels["bank"]];
+            m_open_rows[channel_id] &= ~((uint16_t)(1 << bank_id));
+            break;
+        }
+        case m_commands["ACT16"]: {
+            m_open_rows[channel_id] = (uint16_t)(0xFFFF);
+            break;
+        }
+        case m_commands["ACT4"]: {
+            int bankgroup_id = addr_vec[m_levels["bankgroup"]];
+            for (int bank_id = bankgroup_id * 4; bank_id < (bankgroup_id + 1) * 4; bank_id++) {
+                m_open_rows[channel_id] |= (uint16_t)(1 << bank_id);
+            }
+            break;
+        }
+        case m_commands["ACT"]: {
+            int bank_id = addr_vec[m_levels["bank"]];
+            m_open_rows[channel_id] |= (uint16_t)(1 << bank_id);
+            break;
+        }
+        }
     };
 
     int get_preq_command(int command, const AddrVec_t &addr_vec) override {
@@ -970,7 +1006,7 @@ private:
         m_actions[m_levels["bankgroup"]][m_commands["PRE4"]] = Lambdas::Action::BankGroup::PRE4b<GDDR6>;
         m_actions[m_levels["bankgroup"]][m_commands["ACT4"]] = Lambdas::Action::BankGroup::ACT4b<GDDR6>;
 
-        // Bank actions
+        // Bank Actions
         m_actions[m_levels["bank"]][m_commands["ACT"]] = Lambdas::Action::Bank::ACT<GDDR6>;
         m_actions[m_levels["bank"]][m_commands["PRE"]] = Lambdas::Action::Bank::PRE<GDDR6>;
         m_actions[m_levels["bank"]][m_commands["RDA"]] = Lambdas::Action::Bank::PRE<GDDR6>;
@@ -1036,6 +1072,7 @@ private:
         for (int i = 0; i < num_channels; i++) {
             Node *channel = new Node(this, nullptr, 0, i);
             m_channels.push_back(channel);
+            m_open_rows.push_back(0);
         }
     };
 };

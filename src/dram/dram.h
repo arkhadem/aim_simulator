@@ -57,6 +57,8 @@ public:
     Clk_t m_read_latency = -1; // Number of cycles needed between issuing RD command and receiving data.
     SpecLUT<int> m_command_latencies{m_commands};
 
+    std::vector<uint16_t> m_open_rows;
+
     /************************************************
    *          Device Behavior Interface
    ***********************************************/

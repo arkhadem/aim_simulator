@@ -33,7 +33,10 @@ private:
 
     std::map<Type, int> s_num_RW_cycles;
     std::map<Opcode, int> s_num_AiM_cycles;
+    std::map<int, int> s_num_commands;
     int s_num_idle_cycles = 0;
+    int s_num_active_cycles = 0;
+    int s_num_precharged_cycles = 0;
 
     bool is_reg_RW_mode = false;
 
@@ -75,9 +78,24 @@ public:
                 .desc(fmt::format("total number of AiM {} cycles", AiMISRInfo::convert_AiM_opcode_to_str((Opcode)opcode)));
         }
 
+        for (int command_id = 0; command_id < m_dram->m_commands.size(); command_id++) {
+            s_num_commands[command_id] = 0;
+            register_stat(s_num_commands[command_id])
+                .name(fmt::format("CH{}_num_{}_commands", m_channel_id, std::string(m_dram->m_commands(command_id))))
+                .desc(fmt::format("total number of {} commands", std::string(m_dram->m_commands(command_id))));
+        }
+
         register_stat(s_num_idle_cycles)
             .name(fmt::format("CH{}_idle_cycles", m_channel_id))
             .desc(fmt::format("total number of idle cycles"));
+
+        register_stat(s_num_active_cycles)
+            .name(fmt::format("CH{}_active_cycles", m_channel_id))
+            .desc(fmt::format("total number of active cycles"));
+
+        register_stat(s_num_precharged_cycles)
+            .name(fmt::format("CH{}_precharged_cycles", m_channel_id))
+            .desc(fmt::format("total number of precharged cycles"));
     };
 
     bool compare_addr_vec(Request req1, Request req2, int min_compared_level) {
@@ -194,6 +212,7 @@ public:
                 if (req_it->issue == -1)
                     req_it->issue = m_clk - 1;
                 m_dram->issue_command(req_it->command, req_it->addr_vec);
+                s_num_commands[req_it->command] += 1;
 
                 // If we are issuing the last command, set depart clock cycle and move the request to the pending_reads queue
                 if (req_it->command == req_it->final_command) {
@@ -225,6 +244,12 @@ public:
             if (m_channel_id == 0)
                 m_logger->info("[CLK {}] CH0 IDLE", m_clk);
             s_num_idle_cycles += 1;
+        }
+
+        if (m_dram->m_open_rows[m_channel_id] == 0) {
+            s_num_precharged_cycles += 1;
+        } else {
+            s_num_active_cycles += 1;
         }
     };
 
