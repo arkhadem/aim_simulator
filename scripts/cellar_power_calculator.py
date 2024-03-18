@@ -172,7 +172,7 @@ def command_processor(stat_path):
     stat["utilization"] = 100.00 - (stat["idle_cycles"] / CH_PER_DV / stat["cycles"]) * 100.00
     return stat
 
-def power_calculator(stat, PCIE_bits, Head, HiddenDim, Tokens):
+def power_calculator(stat, PCIE_bits, Head, HiddenDim, Tokens, GQA):
     energy = {}
     latency = {}
     # TODO: should we use the tRC or tRCD?
@@ -189,17 +189,18 @@ def power_calculator(stat, PCIE_bits, Head, HiddenDim, Tokens):
     CMD_COUNT = sum(stat[x] for x in commands)
     energy["MEM_CTR"] = (CTRL_POWER["TRX"] * ISR_COUNT + CTRL_POWER["PHY"] * CMD_COUNT) / CH_PER_CTRL / FREQ
 
+    GQA_factor = 1.00 + 1.00 / GQA
     latency["RMSNorm_latency"] =  HiddenDim / 16.00 / 16.00 / CH_PER_DV * ACCEL_CYCLE["VEC"]    # EMB /16.00 /16.00 ADD
-    latency["RMSNorm_latency"] += SB_RD_CYCLE + SB_WR_CYCLE + 1.00                            # 1 RED
-    latency["RMSNorm_latency"] += RV_RMSNorm_CYCLE                                         # 1 RISCV
-    latency["RMSNorm_latency"] = float(latency["RMSNorm_latency"]) / float(FREQ / KILO)
-    latency["Softmax_latency"] =  Tokens * Head / 16.00 / CH_PER_DV * ACCEL_CYCLE["EXP"]     # TOK*HEAD /16.00 EXP
-    latency["Softmax_latency"] += Tokens * Head / 16.00 / CH_PER_DV * ACCEL_CYCLE["VEC"]     # TOK*HEAD /16.00 ADD
-    latency["Softmax_latency"] += Head * 1.00 * SB_RD_CYCLE                                   # HEAD RED
-    latency["Softmax_latency"] += Head * RV_SFT_CYCLE_PIPELINE                             # HEAD RISCV
+    latency["RMSNorm_latency"] += SB_RD_CYCLE + SB_WR_CYCLE + 1.00                              # 1 RED
+    latency["RMSNorm_latency"] += RV_RMSNorm_CYCLE                                              # 1 RISCV
+    latency["RMSNorm_latency"] = float(2.00 * latency["RMSNorm_latency"]) / float(FREQ / KILO)
+    latency["Softmax_latency"] =  Tokens * Head / 16.00 / CH_PER_DV * ACCEL_CYCLE["EXP"]        # TOK*HEAD /16.00 EXP
+    latency["Softmax_latency"] += Tokens * Head / 16.00 / CH_PER_DV * ACCEL_CYCLE["VEC"]        # TOK*HEAD /16.00 ADD
+    latency["Softmax_latency"] += Head * 1.00 * SB_RD_CYCLE                                     # HEAD RED
+    latency["Softmax_latency"] += Head * RV_SFT_CYCLE_PIPELINE                                  # HEAD RISCV
     latency["Softmax_latency"] = float(latency["Softmax_latency"]) / float(FREQ / KILO)
-    latency["RotEmbed_latency"] = HiddenDim * RV_ROTEmbed_CYCLE                            # EMB RISCV
-    latency["RotEmbed_latency"] = float(latency["RotEmbed_latency"]) / float(FREQ / KILO)
+    latency["RotEmbed_latency"] = HiddenDim * RV_ROTEmbed_CYCLE                                 # EMB RISCV
+    latency["RotEmbed_latency"] = float(GQA_factor * latency["RotEmbed_latency"]) / float(FREQ / KILO)
 
     # Static
     energy["GB_STT"] = stat["latency"] * SRAM_POWER["GB"]["STT"] * CH_PER_DV / KILO
@@ -212,31 +213,31 @@ def power_calculator(stat, PCIE_bits, Head, HiddenDim, Tokens):
     # SRAM Power
     energy["GB_RD"] = SRAM_POWER["GB"]["RD"] * (stat["WRCP"]) / FREQ
     energy["GB_WR"] = SRAM_POWER["GB"]["WR"] * (stat["WRGB"] + stat["RDCP"]) / FREQ
-    energy["SB_DYN"] = (HiddenDim / 16.00 / 16.00 + 1.00 + 1.00) * (2.00 * SRAM_POWER["SB"]["RD"] + 1.00 * SRAM_POWER["SB"]["WR"]) / FREQ  # RMSNorm: EMB /16.00 /16.00 ADD + 1 RED + 1 RV [First 16.00 is #SIMD lanes, Second is because of PU 16.00-to-1 MAC]
-    energy["SB_DYN"] += ((Tokens * Head / 16.00 * 3 + Head * 2.00) * SRAM_POWER["SB"]["RD"]) / FREQ                            # Softmax: TOK * HEAD / 16.00 EXP and ADD + HEAD RED
-    energy["SB_DYN"] += ((Tokens * Head / 16.00 * 2.00 + Head * 2.00) * SRAM_POWER["SB"]["WR"]) / FREQ                            # Softmax: TOK * HEAD / 16.00 EXP and ADD + HEAD RED
-    energy["SB_DYN"] += HiddenDim / 16.00 * (SRAM_POWER["SB"]["RD"] + 2.00 * SRAM_POWER["SB"]["WR"]) / FREQ                    # RotEmbed: EMB /16.00 RV (1 ld + 2.00 st)
+    energy["SB_DYN"] = 2.00 * (HiddenDim / 16.00 / 16.00 + 1.00 + 1.00) * (2.00 * SRAM_POWER["SB"]["RD"] + 1.00 * SRAM_POWER["SB"]["WR"]) / FREQ    # RMSNorm: EMB /16.00 /16.00 ADD + 1 RED + 1 RV [First 16.00 is #SIMD lanes, Second is because of PU 16.00-to-1 MAC]
+    energy["SB_DYN"] += ((Tokens * Head / 16.00 * 3 + Head * 2.00) * SRAM_POWER["SB"]["RD"]) / FREQ                                                 # Softmax: TOK * HEAD / 16.00 EXP and ADD + HEAD RED
+    energy["SB_DYN"] += ((Tokens * Head / 16.00 * 2.00 + Head * 2.00) * SRAM_POWER["SB"]["WR"]) / FREQ                                              # Softmax: TOK * HEAD / 16.00 EXP and ADD + HEAD RED
+    energy["SB_DYN"] += GQA_factor * HiddenDim / 16.00 * (SRAM_POWER["SB"]["RD"] + 2.00 * SRAM_POWER["SB"]["WR"]) / FREQ                            # RotEmbed: EMB /16.00 RV (1 ld + 2.00 st)
     
     ISR_COUNT = 0
     for isr in isrs:
         ISR_COUNT += stat[isr]
-    ISR_COUNT += (HiddenDim / 16.00 / 16.00 + 2.00)              # RMSNorm
-    ISR_COUNT += (Tokens * Head / 16.00 * 2.00 + Head * 2.00)    # Softmax
-    ISR_COUNT += HiddenDim                              # RotEmbed
+    ISR_COUNT += 2.00 * (HiddenDim / 16.00 / 16.00 + 2.00)              # RMSNorm
+    ISR_COUNT += (Tokens * Head / 16.00 * 2.00 + Head * 2.00)           # Softmax
+    ISR_COUNT += GQA_factor * HiddenDim                                 # RotEmbed
     energy["IB_DYN"] = ISR_COUNT * SRAM_POWER["IB"]["RD"] / FREQ
 
     # Accelerator Power
-    energy["RV_DYN"] = RV_RMSNorm_CYCLE * ACCEL_POWER["RV"] / FREQ               # 1 RISCV (RMSNorm)
-    energy["RV_DYN"] += Head * RV_SFT_CYCLE_SINGLE * ACCEL_POWER["RV"] / FREQ    # HEAD RISCV (Softmax)
-    energy["RV_DYN"] += HiddenDim * RV_ROTEmbed_CYCLE * ACCEL_POWER["RV"] / FREQ # EMB RISCV (RotEmbed)
+    energy["RV_DYN"] = 2.00 * RV_RMSNorm_CYCLE * ACCEL_POWER["RV"] / FREQ                       # RMSNorm: 1 RISCV
+    energy["RV_DYN"] += Head * RV_SFT_CYCLE_SINGLE * ACCEL_POWER["RV"] / FREQ                   # Softmax: HEAD RISCV
+    energy["RV_DYN"] += GQA_factor * HiddenDim * RV_ROTEmbed_CYCLE * ACCEL_POWER["RV"] / FREQ   # RotEmbed: EMB RISCV
 
-    energy["RED_DYN"] = (1.00 * ACCEL_POWER["RED"]["DYN"]) / FREQ                   # 1 RED (RMSNorm)
-    energy["RED_DYN"] +=(Head * ACCEL_POWER["RED"]["DYN"]) / FREQ                # HEAD RED (Softmax)
+    energy["RED_DYN"] = 2.00 * (1.00 * ACCEL_POWER["RED"]["DYN"]) / FREQ                    # 1 RED (RMSNorm)
+    energy["RED_DYN"] +=(Head * ACCEL_POWER["RED"]["DYN"]) / FREQ                           # HEAD RED (Softmax)
 
-    energy["EXP_DYN"] = (Tokens * Head / 16.00 * ACCEL_POWER["EXP"]["DYN"]) / FREQ  # TOK*HEAD /16.00 EXP (Softmax)
+    energy["EXP_DYN"] = (Tokens * Head / 16.00 * ACCEL_POWER["EXP"]["DYN"]) / FREQ          # TOK*HEAD /16.00 EXP (Softmax)
 
-    energy["VEC_DYN"] = HiddenDim / 16.00 / 16.00 * ACCEL_POWER["VEC"]["DYN"] / FREQ    # EMB /16.00 /16.00 ADD (RMSNorm) [First 16.00 is #SIMD lanes, Second is because of PU 16.00-to-1 MAC]
-    energy["VEC_DYN"] +=(Tokens * Head / 16.00 * ACCEL_POWER["VEC"]["DYN"]) / FREQ  # TOK*HEAD /16.00 ADD (Softmax)
+    energy["VEC_DYN"] = 2.00 * HiddenDim / 16.00 / 16.00 * ACCEL_POWER["VEC"]["DYN"] / FREQ     # EMB /16.00 /16.00 ADD (RMSNorm) [First 16.00 is #SIMD lanes, Second is because of PU 16.00-to-1 MAC]
+    energy["VEC_DYN"] +=(Tokens * Head / 16.00 * ACCEL_POWER["VEC"]["DYN"]) / FREQ              # TOK*HEAD /16.00 ADD (Softmax)
 
     # We simply assume all the other components have a switching activity of 0.5
     energy["DV_CTR"] = stat["latency"] * 0.5 * (ACCEL_POWER["CTR"]["STT"] + ACCEL_POWER["CTR"]["DYN"]) / KILO
@@ -254,6 +255,7 @@ parser.add_argument("--block", help="Number of blocks", type=int, required=True)
 parser.add_argument("--ch_per_bl", help="Number of channels per block", type=int, required=True)
 parser.add_argument("--dv", help="Total number of devices (default = 32)", default=32, type=int)
 parser.add_argument("--ch_per_dv", help="Number of channels per device (default = 32)", default=32, type=int)
+parser.add_argument("--gqa", help="Factor of group query attention (default = 1)", default=1, type=int)
 args = parser.parse_args()
 
 mlog = args.mlog
@@ -265,6 +267,7 @@ token = args.token
 block = args.block
 CH_PER_BL = args.ch_per_bl
 DV = args.dv
+gqa = args.gqa
 
 if args.ch_per_dv != CH_PER_DV:
     CH_PER_DV = args.ch_per_dv
@@ -277,7 +280,7 @@ energy_token = {}
 power_alldv = {}
 stat_main = command_processor(mlog)
 PCIE = hidden if CH_PER_BL <= CH_PER_DV else hidden * 10 + fc * 2.00
-energy_main, latency_main = power_calculator(stat_main, PCIE, head, hidden, token)
+energy_main, latency_main = power_calculator(stat_main, PCIE, head, hidden, token, gqa)
 
 total_ch_used = block * CH_PER_BL
 total_dv_need = 0
@@ -289,7 +292,7 @@ if CH_PER_BL > CH_PER_DV:
     stat_pim = command_processor(plog)
     # print(stat_main)
     # print(stat_pim)
-    energy_pim, latency_pim = power_calculator(stat_pim, PCIE, head, hidden, token)
+    energy_pim, latency_pim = power_calculator(stat_pim, PCIE, head, hidden, token, gqa)
     total_dv_need = block * DV_PER_BL
     for comp in energy_main.keys():
         energy_token[comp] = (energy_main[comp] + energy_pim[comp] * (DV_PER_BL - 1.00)) * block
@@ -310,9 +313,10 @@ print("CH/DV,CH-used,CH-needed,DV-needed")
 print(f"{CH_PER_DV},{total_ch_used},{total_ch_need},{total_dv_need}")
 
 print(",\nlatency (ms)")
-print("pim,RMS,SFT,ROT,total,utilization(%)")
+print("pim,RMS,SFT,ROT,Total Acc,Total,utilization(%)")
+total_acc_latency = latency_main["RMSNorm_latency"] + latency_main["Softmax_latency"] + latency_main["RotEmbed_latency"]
 total_latency = stat_main["latency"] + latency_main["RMSNorm_latency"] + latency_main["Softmax_latency"] + latency_main["RotEmbed_latency"]
-print(f"{stat_main['latency']},{latency_main['RMSNorm_latency']},{latency_main['Softmax_latency']},{latency_main['RotEmbed_latency']},{total_latency},{stat_main['utilization']}")
+print(f"{stat_main['latency']},{latency_main['RMSNorm_latency']},{latency_main['Softmax_latency']},{latency_main['RotEmbed_latency']},{total_acc_latency},{total_latency},{stat_main['utilization']}")
 
 print(",\nenergy 1 token detailed (mJ):")
 for comp in energy_token.keys():
