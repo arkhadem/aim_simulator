@@ -58,6 +58,12 @@ tRC = 44.5
 tBL = 1.25
 tCCDL = 1.0
 
+# DRAM_POWER = {  "ACT_STBY": 415,
+#                 "PRE_STBY": 317.5,
+#                 "ACT": 93.9,
+#                 "WR": 915,
+#                 "RD": 525}
+
 DRAM_POWER = {  "ACT_STBY": 527.5 / 2.00, # 415,
                 "PRE_STBY": 366.3 / 2.00, # 317.5,
                 "ACT": 132.6 / 2.00, # 93.9,
@@ -281,24 +287,20 @@ if CH_PER_BL > CH_PER_DV:
     PIPE_STAGES = DV / DV_PER_BL
     assert DV % DV_PER_BL == 0
     stat_pim = command_processor(plog)
-    print(stat_main)
-    print(stat_pim)
+    # print(stat_main)
+    # print(stat_pim)
     energy_pim, latency_pim = power_calculator(stat_pim, PCIE, head, hidden, token)
     total_dv_need = block * DV_PER_BL
     for comp in energy_main.keys():
         energy_token[comp] = (energy_main[comp] + energy_pim[comp] * (DV_PER_BL - 1.00)) * block
-        power_alldv[comp] = energy_token[comp] * PIPE_STAGES / stat_main["latency"]
-        print(PIPE_STAGES)
+        power_alldv[comp] = (energy_main[comp] + energy_pim[comp] * (DV_PER_BL - 1.00)) * PIPE_STAGES / stat_main["latency"]
 else:
     BL_PER_DV = int(CH_PER_DV / CH_PER_BL)
     total_dv_need = math.ceil(float(block) / float(BL_PER_DV))
     assert total_dv_need <= DV
-    PIPE_STAGES = DV / total_dv_need
-    assert DV % total_dv_need == 0
     for comp in energy_main.keys():
         energy_token[comp] = energy_main[comp] * total_dv_need
-        power_alldv[comp] = energy_token[comp] * PIPE_STAGES / stat_main["latency"]
-        print(PIPE_STAGES)
+        power_alldv[comp] = energy_main[comp] * total_dv_need / stat_main["latency"]
     for comp in latency_main.keys():
         latency_main[comp] = latency_main[comp] * float(BL_PER_DV)
 total_ch_need = total_dv_need * CH_PER_DV
