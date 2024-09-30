@@ -218,12 +218,12 @@ public:
     static void init() {
         aim_opcode_to_str[Opcode::ISR_WR_SBK] = "ISR_WR_SBK";
         opcode_str_to_aim_ISR["ISR_WR_SBK"] = AiMISR(Opcode::ISR_WR_SBK,
-                                                     {AiMISR::Field::opsize,
+                                                     {//  AiMISR::Field::opsize,
                                                       AiMISR::Field::GPR_addr_0,
                                                       AiMISR::Field::channel_mask,
                                                       AiMISR::Field::bank_index,
                                                       AiMISR::Field::row_addr},
-                                                     true,    // channel_count_eq_one
+                                                     false,   // true,    // channel_count_eq_one
                                                      false,   // AiM_DMA_blocking
                                                      false,   // require_reg_RW_mod
                                                      "column" // target_level
@@ -303,14 +303,14 @@ public:
         aim_opcode_to_str[Opcode::ISR_RD_SBK] = "ISR_RD_SBK";
         opcode_str_to_aim_ISR["ISR_RD_SBK"] = AiMISR(Opcode::ISR_RD_SBK,
                                                      {
-                                                         AiMISR::Field::opsize,
+                                                         //  AiMISR::Field::opsize,
                                                          AiMISR::Field::GPR_addr_0,
                                                          AiMISR::Field::channel_mask,
                                                          AiMISR::Field::bank_index,
                                                          AiMISR::Field::row_addr,
                                                      },
-                                                     true,    // channel_count_eq_one
-                                                     true,    // AiM_DMA_blocking
+                                                     false,   // true,    // channel_count_eq_one
+                                                     false,   // true,   // AiM_DMA_blocking
                                                      false,   // require_reg_RW_mod
                                                      "column" // target_level
         );

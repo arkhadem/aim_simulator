@@ -197,7 +197,9 @@ public:
         for (int channel_id = 0; channel_id < MAX_CHANNEL_COUNT; channel_id++) {
             while (remaining_AiM_requests[channel_id].empty() == false) {
                 was_AiM_request_remaining = true;
+                m_logger->info("[CLK {}] 0- Sending {} to channel {}", m_clk, remaining_AiM_requests[channel_id].front().str(), channel_id);
                 if (m_controllers[channel_id]->send(remaining_AiM_requests[channel_id].front()) == false) {
+                    m_logger->info("[CLK {}] 0- failed", m_clk, channel_id);
                     is_AiM_request_remaining = true;
                     break;
                 }
@@ -225,6 +227,15 @@ public:
                     int64_t ch_mask = host_req.channel_mask;
                     uint8_t channel_count = CountSetBit(ch_mask);
                     Request aim_req = host_req;
+                    if (aim_req.opcode == Opcode::ISR_RD_SBK) {
+                        aim_req.type = Type::Read;
+                        aim_req.mem_access_region = MemAccessRegion::MEM;
+                        aim_req.opcode = Opcode::MIN;
+                    } else if (aim_req.opcode == Opcode::ISR_WR_SBK) {
+                        aim_req.type = Type::Write;
+                        aim_req.mem_access_region = MemAccessRegion::MEM;
+                        aim_req.opcode = Opcode::MIN;
+                    }
 
                     switch (opcode) {
 
@@ -277,11 +288,14 @@ public:
                         if (opsize == -1)
                             opsize = 1;
 
+                        if (host_req.col_addr == -1)
+                            host_req.col_addr = 0;
+
                         for (int i = 0; i < opsize; i++) {
                             int64_t channel_mask = ch_mask;
 
-                            if (aim_ISR.is_field_legal(AiMISR::Field::col_addr) == true)
-                                aim_req.col_addr = host_req.col_addr + i;
+                            // if (aim_ISR.is_field_legal(AiMISR::Field::col_addr) == true)
+                            aim_req.col_addr = host_req.col_addr + i;
 
                             for (int cnt = 0; cnt < channel_count; cnt++) {
                                 uint8_t channel_id = FindFirstChannelIndex(channel_mask);
@@ -295,6 +309,7 @@ public:
                                 if (m_controllers[channel_id]->send(aim_req) == false) {
                                     remaining_AiM_requests[channel_id].push(aim_req);
                                     all_AiM_requests_sent = false;
+                                    m_logger->info("[CLK {}] 1- failed", aim_req.str(), m_clk, channel_id);
                                 }
 
                                 if (aim_ISR.AiM_DMA_blocking) {
@@ -336,7 +351,7 @@ public:
                         for (int channel_id = 0; channel_id < m_controllers.size(); channel_id++) {
                             aim_req.AiM_req_id = AiM_req_id++;
                             aim_req.host_req_id = host_req.host_req_id;
-                            m_logger->info("[CLK {}] 2- Sending {} to channel {}", m_clk, aim_req.str(), channel_id);
+                            m_logger->info("[CLK {}] 3- Sending {} to channel {}", m_clk, aim_req.str(), channel_id);
                             if (m_controllers[channel_id]->send(aim_req) == false) {
                                 remaining_AiM_requests[channel_id].push(aim_req);
                                 all_AiM_requests_sent = false;
@@ -369,7 +384,7 @@ public:
                         aim_req.AiM_req_id = AiM_req_id++;
                         apply_addr_mapp(aim_req, aim_req.channel_mask);
                         int channel_id = aim_req.addr_vec[0];
-                        m_logger->info("[CLK {}] 3- Sending {} to channel {}", m_clk, aim_req.str(), channel_id);
+                        m_logger->info("[CLK {}] 4- Sending {} to channel {}", m_clk, aim_req.str(), channel_id);
                         if (m_controllers[channel_id]->send(aim_req) == false) {
                             remaining_AiM_requests[channel_id].push(aim_req);
                             all_AiM_requests_sent = false;
@@ -404,7 +419,7 @@ public:
                         aim_req.AiM_req_id = AiM_req_id++;
                         apply_addr_mapp(aim_req, aim_req.channel_mask);
                         int channel_id = aim_req.addr_vec[0];
-                        m_logger->info("[CLK {}] 4- Sending {} to channel {}, channel_mask {}", m_clk, aim_req.str(), channel_id, aim_req.channel_mask);
+                        m_logger->info("[CLK {}] 5- Sending {} to channel {}, channel_mask {}", m_clk, aim_req.str(), channel_id, aim_req.channel_mask);
                         if (m_controllers[channel_id]->send(aim_req) == false) {
                             remaining_AiM_requests[channel_id].push(aim_req);
                             all_AiM_requests_sent = false;
