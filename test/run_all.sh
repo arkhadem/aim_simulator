@@ -1,0 +1,9 @@
+./build/ramulator2 -f test/example.yaml -t test/all_isr.trace &> test/all_isr.result
+./build/ramulator2 -f test/example.yaml -t test/micro_ewmul_16banks.trace &> test/micro_ewmul_16banks.result
+./build/ramulator2 -f test/example.yaml -t test/micro_macab_1024_16banks.trace &> test/micro_macab_1024_16banks.result
+./build/ramulator2 -f test/example.yaml -t test/micro_rdmac_1024_16banks.trace &> test/micro_rdmac_1024_16banks.result
+./build/ramulator2 -f test/example.yaml -t test/micro_wrab_1024_1bank.trace &> test/micro_wrab_1024_1bank.result
+./build/ramulator2 -f test/example.yaml -t test/micro_wrbias_1024_16banks.trace &> test/micro_wrbias_1024_16banks.result
+./build/ramulator2 -f test/example.yaml -t test/micro_wrbias_mac_af_rdaf_16banks.trace &> test/micro_wrbias_mac_af_rdaf_16banks.result
+./build/ramulator2 -f test/example.yaml -t test/micro_wrbias_mac_rdmac_mac_16banks.trace &> test/micro_wrbias_mac_rdmac_mac_16banks.result
+./build/ramulator2 -f test/example.yaml -t test/micro_wrgb_gbbk_bggb_16banks.trace &> test/micro_wrgb_gbbk_bggb_16banks.result

@@ -111,7 +111,7 @@ private:
     void receive(Request &req) {
         assert(req.type == Type::AIM);
         assert(req.opcode == Opcode::ISR_EOC);
-        m_logger->info("End-Of-Compute Called Back!");
+        // m_logger->info("End-Of-Compute Called Back!");
         m_trace_reached_calledback = true;
     }
 
@@ -209,7 +209,7 @@ private:
                         if (req.opcode == Opcode::ISR_EOC) {
                             m_trace_reached_EOC = true;
                             req.callback = callback;
-                            m_logger->info("End-Of-Compute Reached!");
+                            // m_logger->info("End-Of-Compute Reached!");
                         }
                     } else {
 

@@ -168,8 +168,8 @@ public:
 
     void tick() override {
         m_clk++;
-        if ((m_clk == 1) || (m_clk % 1000 == 0))
-            m_logger->info("[CLK {}]", m_clk);
+        // if ((m_clk == 1) || (m_clk % 1000 == 0))
+        //     m_logger->info("[CLK {}]", m_clk);
 
         // 1. Serve completed reads
         serve_completed_reqs();
@@ -192,7 +192,7 @@ public:
                 req_it->depart = m_clk;
                 pending_reads.push_back(*req_it);
                 buffer->remove(req_it);
-                m_logger->info("[CLK {}] EOC/SYNC ready for callback", m_clk);
+                // m_logger->info("[CLK {}] EOC/SYNC ready for callback", m_clk);
             } else {
 
                 bool requires_reg_RW_mode = false;
@@ -208,7 +208,7 @@ public:
                 }
 
                 // If we find a real request to serve
-                m_logger->info("[CLK {}] Issuing {} for {}", m_clk, std::string(m_dram->m_commands(req_it->command)).c_str(), req_it->str());
+                // m_logger->info("[CLK {}] Issuing {} for {}", m_clk, std::string(m_dram->m_commands(req_it->command)).c_str(), req_it->str());
                 if (req_it->issue == -1)
                     req_it->issue = m_clk - 1;
                 m_dram->issue_command(req_it->command, req_it->addr_vec);
@@ -241,8 +241,8 @@ public:
                 }
             }
         } else if (m_read_buffer.size() == 0 && m_write_buffer.size() == 0 && m_aim_buffer.size() == 0 && pending_reads.size() == 0 && pending_writes.size() == 0) {
-            if (m_channel_id == 0)
-                m_logger->info("[CLK {}] CH0 IDLE", m_clk);
+            // if (m_channel_id == 0)
+            // m_logger->info("[CLK {}] CH0 IDLE", m_clk);
             s_num_idle_cycles += 1;
         }
 
@@ -273,11 +273,12 @@ private:
 
                     if (req.callback) {
                         // If the request comes from outside (e.g., processor), call its callback
-                        m_logger->info("[CLK {}] Calling back {}!", m_clk, req.str());
+                        // m_logger->info("[CLK {}] Calling back {}!", m_clk, req.str());
                         req.callback(req);
-                    } else {
-                        m_logger->info("[CLK {}] Warning: {} doesn't have callback set but it is in the pending_reads queue!", m_clk, req.str());
                     }
+                    // else {
+                    //     m_logger->info("[CLK {}] Warning: {} doesn't have callback set but it is in the pending_reads queue!", m_clk, req.str());
+                    // }
                     // Finally, r emove this request from the pending_reads queue
                     pending_reads.pop_front();
                 }
@@ -287,7 +288,7 @@ private:
         while (write_req_it != pending_writes.end()) {
             if (write_req_it->depart <= m_clk) {
                 // Remove this write request
-                m_logger->info("[CLK {}] Finished {}!", m_clk, write_req_it->str());
+                // m_logger->info("[CLK {}] Finished {}!", m_clk, write_req_it->str());
                 write_req_it = pending_writes.erase(write_req_it);
             } else {
                 ++write_req_it;

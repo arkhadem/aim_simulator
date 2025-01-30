@@ -1,0 +1,145 @@
+# AiM [opcode] [opsize] [GPR_id_0] [GPR_id_1] [channel_mask] [bank_id] [row_id]
+# R/W GPR [GPR_id]     
+# R/W CFR "[CFR_id (0: broadcast  1: EWUL_bg  2: afm)]" [data]    
+# R/W MEM [channel_id] [bank_id] [row_id]   
+# Access granularity [GPR: BURST bytes] [CFR: 2 bytes] [MEM: Burst bytes] where BURST = 32 bytes       
+        
+# Regular write to row [8-11] in bank [2] of channels [0-3]       
+# R/W MEM [channel_id] [bank_id] [row_id]   
+W MEM 0 2 8   
+W MEM 1 2 9   
+W MEM 2 2 10   
+W MEM 3 2 11   
+        
+# Writing to GPR [0-1] for bank data       
+# R/W GPR [GPR_id]     
+W GPR 0     
+W GPR 1     
+        
+# Writing to GPR [2-3] for global buffer data       
+# R/W GPR [GPR_id]     
+W GPR 2     
+W GPR 3     
+        
+# Writing to GPR [4-7] for bias data       
+# R/W GPR [GPR_id]     
+W GPR 4     
+W GPR 5     
+W GPR 6     
+W GPR 7     
+        
+# "Write [2-data = 512 bits] from GPR[0  1] to channels [0-3] bank [0] row [0] (channel mask must only specify 1 channel)"       
+# AiM [opcode] [GPR_id_0] [channel_mask] [bank_id] [row_id] 
+AiM WR_SBK 0 1 0 0 
+AiM WR_SBK 0 2 0 0 
+AiM WR_SBK 0 4 0 0 
+AiM WR_SBK 0 8 0 0 
+AiM WR_SBK 1 1 0 0 
+AiM WR_SBK 1 2 0 0 
+AiM WR_SBK 1 4 0 0 
+AiM WR_SBK 1 8 0 0 
+        
+# "Write [2-data = 512 bits] from GPR[2  3] to channels [0-3] global buffers"       
+# AiM [opcode] [opsize] [GPR_id_0] [channel_mask]   
+AiM WR_GB 2 2 15   
+        
+# Write [4-data = 1024 bits] from GPR[4-7] to channels [0-3] * 16 MAC accumulators       
+# AiM [opcode] [GPR_id_0] [channel_mask]    
+AiM WR_BIAS 4 15    
+        
+# set CFR[mr13.broadcast at address 0x0010] to 1 (MAC from global buffer)       
+# R/W CFR "[CFR_id (0: broadcast  1: EWUL_bg  2: afm)]" [data]    
+W CFR 0 1    
+        
+# MAC operation between 2 columns of all banks in channels [0-3] with 2 columns of global buffer       
+# AiM [opcode] [opsize] [channel_mask] [row_id]   
+AiM MAC_ABK 2 15 0   
+        
+# set CFR[mr13.broadcast at address 0x0010] to 0 (MAC from next bank)       
+# R/W CFR "[CFR_id (0: broadcast  1: EWUL_bg  2: afm)]" [data]    
+W CFR 0 0    
+        
+# MAC operation between 2 columns of half of the banks in channels [0-3] with 2 columns of the next banks       
+# AiM [opcode] [opsize] [channel_mask] [row_id]   
+AiM MAC_ABK 2 15 0   
+        
+# set CFR[mr13.broadcast at address 0x0010] to 1 (MAC from global buffer)       
+# R/W CFR "[CFR_id (0: broadcast  1: EWUL_bg  2: afm)]" [data]    
+W CFR 0 1    
+        
+# MAC operation between 2 columns of bank [0] in channels [0-3] with 2 columns of global buffer       
+# AiM [opcode] [opsize] [channel_mask] [bank_id] [row_id]  
+AiM MAC_SBK 2 15 0 0  
+        
+# set CFR[mr13.broadcast at address 0x0010] to 0 (MAC from next bank)       
+# R/W CFR "[CFR_id (0: broadcast  1: EWUL_bg  2: afm)]" [data]    
+W CFR 0 0    
+        
+# MAC operation between 2 columns of bank [0] in channels [0-3] with 2 columns of the next banks       
+# AiM [opcode] [opsize] [channel_mask] [bank_id] [row_id]  
+AiM MAC_SBK 2 15 0 0  
+        
+# set CFR[mr14.ewmul_bg at address 0x0018] to 1 (EWMUL only 1 bankgroup)       
+# R/W CFR "[CFR_id (0: broadcast  1: EWUL_bg  2: afm)]" [data]    
+W CFR 1 1    
+        
+# "ELMUL operation between 1 bank group  2 columns of channels [0-3] with 2 columns of the next banks"       
+# AiM [opcode] [opsize] [channel_mask] [row_id]   
+AiM EWMUL 2 15 0   
+        
+# set CFR[mr14.ewmul_bg at address 0x0018] to 0 (EWMUL in all bankgroups)       
+# R/W CFR "[CFR_id (0: broadcast  1: EWUL_bg  2: afm)]" [data]    
+W CFR 1 0    
+        
+# "ELMUL operation between all bank groups  2 columns of channels [0-3] with 2 columns of the next banks"       
+# AiM [opcode] [opsize] [channel_mask] [row_id]   
+AiM EWMUL 2 15 0   
+        
+# set CFR[mr13.afm at address 0x001C] to 1 (AF number 1)       
+# R/W CFR "[CFR_id (0: broadcast  1: EWUL_bg  2: afm)]" [data]    
+W CFR 2 1    
+        
+# AF operation in all banks of channels [0-3]       
+# AiM [opcode] [channel_mask]     
+AiM AF 15     
+        
+# Reading MAC accumulators of all banks of channels [0-3] to GPRs[8-11]       
+# AiM [opcode] [GPR_id_0] [channel_mask]    
+AiM RD_MAC 8 15    
+        
+# Reading AF results of all banks of channels [0-3] to GPRs[12-15]       
+# AiM [opcode] [GPR_id_0] [channel_mask]    
+AiM RD_AF 12 15    
+        
+# ELADD operation between GPRs[8-11] and GPRs[12-15]       
+# AiM [opcode] [opsize] [GPR_id_0] [GPR_id_1]   
+AiM EWADD 4 8 12   
+        
+# Copying 2 columns from bank 0 row 0 to global buffers in channels [0-3]       
+# AiM [opcode] [opsize] [channel_mask] [bank_id] [row_id]  
+AiM COPY_BKGB 2 15 0 0  
+        
+# Copying 2 columns from global buffers to bank 0 row 0 in channels [0-3]       
+# AiM [opcode] [opsize] [channel_mask] [bank_id] [row_id]  
+AiM COPY_GBBK 2 15 0 0  
+        
+# Read [2-data = 512 bits] from channels [0-3] bank [0] row [0] to GPR[20-27] (channel mask must only specify 1 channel)       
+# AiM [opcode] [GPR_id_0] [channel_mask] [bank_id] [row_id] 
+AiM RD_SBK 20 1 0 0 
+AiM RD_SBK 21 1 0 0 
+AiM RD_SBK 22 2 0 0 
+AiM RD_SBK 23 2 0 0 
+AiM RD_SBK 24 4 0 0 
+AiM RD_SBK 25 4 0 0 
+AiM RD_SBK 26 8 0 0 
+AiM RD_SBK 27 8 0 0 
+        
+# AiM [opcode] [GPR_id_0] [channel_mask] [row_id]   
+AiM WR_ABK 4 1 5   
+AiM WR_ABK 5 2 5   
+AiM WR_ABK 6 4 5   
+AiM WR_ABK 7 8 5   
+        
+# Finishing compute (MUST have this instruction at the end of the trace file)       
+# AiM [opcode]      
+AiM EOC

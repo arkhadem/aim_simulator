@@ -4,3 +4,4 @@ ext/
 *.log
 ramulator2
 *.so
+*.result
