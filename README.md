@@ -1,43 +1,50 @@
-# Ramulator V2.0a
-## Introduction
-Ramulator 2.0 is a modern, modular, and extensible cycle-accurate DRAM simulator. It is the successor of Ramulator 1.0 [Kim+, CAL'16], achieving both fast simulation speed and ease of extension. The goal of Ramulator 2.0 is to enable rapid and agile implementation and evaluation of design changes in the memory controller and DRAM to meet the increasing research effort in improving the performance, security, and reliability of memory systems. Ramulator 2.0 abstracts and models key components in a DRAM-based memory system and their interactions into shared interfaces and independent implementations, enabling easy modification and extension of the modeled functions of the memory controller and DRAM. 
+# SK hynix Accelerator-in-Memory (AiM) Simulator
 
-This Github repository contains the public version of Ramulator 2.0. From time to time, we will synchronize improvements of the code framework, additional functionalities, bug fixes, etc. from our internal version. Ramulator 2.0 is in its early stage and welcomes your contribution as well as new ideas and implementations in the memory system!
+This repository provides a trace-driven simulator for AiM PIM architecutre [1][2] based on Ramulator 2.0 trace-driven simulator [3].
 
-Currently, Ramulator 2.0 provides the DRAM models for the following standards:
-- DDR3, DDR4, DDR5
-- LPDDR5
-- GDDR6
-- HBM(2), HBM3
+## Description
 
-Ramulator 2.0 also provides implementations for the following RowHammer mitigation techniques:
-- PARA [[Kim+, ISCA'14]](https://people.inf.ethz.ch/omutlu/pub/dram-row-hammer_isca14.pdf)
-- TWiCe [[Lee+, ISCA'19]](https://ieeexplore.ieee.org/document/8980327)
-- Graphene [[Park+, MICRO'20]](https://microarch.org/micro53/papers/738300a001.pdf)
-- Hydra [[Qureshi+, ISCA'22]](https://memlab.ece.gatech.edu/papers/ISCA_2022_1.pdf)
-- Randomized Row Swap (RRS) [[Saileshwar+, ASPLOS'22]](https://gururaj-s.github.io/assets/pdf/ASPLOS22_Saileshwar.pdf)
-- An "Oracle" Refresh Mitigation [[Kim+, ISCA'20]](https://people.inf.ethz.ch/omutlu/pub/Revisiting-RowHammer_isca20-FINAL-DO-NOT_DISTRIBUTE.pdf)
+## Modifed Modules
 
-A quick glance at Ramulator 2.0's other key features:
-- Modular and extensible software architecture: Ramulator 2.0 provides an explicit separation of implementations from interfaces. Therefore new ideas can be implemented without intrusive changes.
-- Self-registering factory for interface and implementation classes: Ramulator 2.0 automatically constructs the correct class of objects by their names as you specify in the configuration. Do *not* worry about boilerplate code!
-- YAML-based configuration file: Ramulator 2.0 is configured via human-readable and machine-friendly configuration files. Sweeping parameters is as easy as editing a Python dictionary!
+To add PIM capabilities to the GDDR6 memory channels, we augmented Ramulator 2.0 with the following modules:
 
-The initial release of Ramulator 2.0 is described in the following [paper](https://people.inf.ethz.ch/omutlu/pub/Ramulator2_arxiv23.pdf):
-> Haocong Luo, Yahya Can Tugrul, F. Nisa Bostancı, Ataberk Olgun, A. Giray Yaglıkcı, and Onur Mutlu,
-> "Ramulator 2.0: A Modern, Modular, and Extensible DRAM Simulator,"
-> arXiv, 2023.
+* AiM ISR instruction definitions. ISR instructions are issued by the host.
+* AiM trace-driven frontend reads the ISR instructions from a trace file.
+* AiM DRAM system decodes AiM ISR instructions, unrolls and generates multiple memory requests for multiple channels.
+* AiM DRAM controller decodes and issues appropriate DRAM commands to DRAM banks.
+* AiM GDDR6 contains timing constraints, pre-requisites, and actions for AiM DRAM commands.
 
-If you use Ramulator 2.0 in your work, please use the following citation:
-```
-@misc{luo2023ramulator2,
-  title={{Ramulator 2.0: A Modern, Modular, and Extensible DRAM Simulator}}, 
-  author={Haocong Luo and Yahya Can Tu\u{g}rul and F. Nisa Bostancı and Ataberk Olgun and A. Giray Ya\u{g}l{\i}k\c{c}{\i} and and Onur Mutlu},
-  year={2023},
-  archivePrefix={arXiv},
-  primaryClass={cs.AR}
-}
-```
+## Implemented ISRs
+
+Instruction Set Register (ISR) instructions and conventional `read` and `write` memory accesses are issued by the host.
+Memory system is responsible for decoding ISRs and ensuring the data hazard between these instructions.
+`opcode` and `channel_mask` fields of the ISR instructions encode the unrolling factor (number of consequetive DRAM columns) and target channels.
+Some ISR instructions require general-purpose register (GPR) or configuration register (CFR) ids.
+The following table lists all supported ISR instructions:
+
+| ISR Instruction | Detail |
+| :-------------: | :----: |
+| WR_SBK GPR_0 channel_mask bank row | write 256b from GPR to a single bank |
+| WR_ABK GPR_0 channel_mask row | write 256b from GPR to 16 banks |
+| WR_GB opsize GPR_0 channel_mask | write 256b from GPR to GB |
+| WR_BIAS GPR_0 channel_mask | write 256b from GPR to 16b MAC registers of 16 banks |
+| RD_MAC GPR_0 channel_mask | read 256b from 16b MAC registers of 16 banks to GPR |
+| RD_AF GPR_0 channel_mask | read 256b from 16b AF registers of 16 banks to GPR |
+| RD_SBK GPR_0 channel_mask bank row | write 256b from a single bank to GPR |
+| COPY_BKGB opsize channel_mask bank row | copy 256b from 16 banks to GB |
+| COPY_GBBK opsize channel_mask bank row | copy 256b from GB to 16 banks |
+| MAC_SBK opsize channel_mask bank row | perform 256b MAC in a single bank |
+| MAC_ABK opsize channel_mask row | perform 256b MAC in all banks |
+| AF channel_mask | perform activation function in all banks |
+| EWMUL opsize channel_mask row | perform element-wise multiplication in 4 banks |
+| EWADD opsize GPR_0 GPR_1 | perform element-wise addition using GPRs |
+| SYNC | barrier between ISR instructions |
+| EOC | end of compute, finishes simulation |
+| W MEM channel_id bank row | conventional write access to a bank |
+| R MEM channel_id bank row | conventional read access from a bank |
+| W GPR GPR_0 | write 256b to GPR |
+| R GPR GPR_0 | read 256b from GPR |
+| W CFR CFR_0 data | configure CFR with data |
 
 ## Using Ramulator 2.0
 ### Dependencies
@@ -369,3 +376,9 @@ python3 run_multicore.py
 4. Execute the notebook `plot.ipynb` to plot the results
 
 
+
+## References
+
+[1] Y. Kwon, *et. al.*, System architecture and software stack for GDDR6-AiM. In 2022 IEEE Hot Chips 34 Symposium (HCS).
+[2] S. Lee, *et. al.*, A 1ynm 1.25 v 8gb, 16gb/s/pin gddr6-based accelerator-in-memory supporting 1tflops mac operation and various activation functions for deep-learning applications. In 2022 IEEE International Solid-State Circuits Conference (ISSCC).
+[3] H. Luo, *et. al.*, Ramulator 2.0: A Modern, Modular, and Extensible DRAM Simulator. In 2024 IEEE Computuer Architecture Letter.

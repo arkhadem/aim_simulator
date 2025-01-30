@@ -218,12 +218,11 @@ public:
     static void init() {
         aim_opcode_to_str[Opcode::ISR_WR_SBK] = "ISR_WR_SBK";
         opcode_str_to_aim_ISR["ISR_WR_SBK"] = AiMISR(Opcode::ISR_WR_SBK,
-                                                     {//  AiMISR::Field::opsize,
-                                                      AiMISR::Field::GPR_addr_0,
+                                                     {AiMISR::Field::GPR_addr_0,
                                                       AiMISR::Field::channel_mask,
                                                       AiMISR::Field::bank_index,
                                                       AiMISR::Field::row_addr},
-                                                     false,   // true,    // channel_count_eq_one
+                                                     false,   // channel_count_eq_one
                                                      false,   // AiM_DMA_blocking
                                                      false,   // require_reg_RW_mod
                                                      "column" // target_level
@@ -242,11 +241,9 @@ public:
 
         aim_opcode_to_str[Opcode::ISR_WR_GB] = "ISR_WR_GB";
         opcode_str_to_aim_ISR["ISR_WR_GB"] = AiMISR(Opcode::ISR_WR_GB,
-                                                    {
-                                                        AiMISR::Field::opsize,
-                                                        AiMISR::Field::GPR_addr_0,
-                                                        AiMISR::Field::channel_mask,
-                                                    },
+                                                    {AiMISR::Field::opsize,
+                                                     AiMISR::Field::GPR_addr_0,
+                                                     AiMISR::Field::channel_mask},
                                                     false,    // channel_count_eq_one
                                                     false,    // AiM_DMA_blocking
                                                     true,     // require_reg_RW_mod
@@ -255,10 +252,8 @@ public:
 
         aim_opcode_to_str[Opcode::ISR_WR_BIAS] = "ISR_WR_BIAS";
         opcode_str_to_aim_ISR["ISR_WR_BIAS"] = AiMISR(Opcode::ISR_WR_BIAS,
-                                                      {
-                                                          AiMISR::Field::GPR_addr_0,
-                                                          AiMISR::Field::channel_mask,
-                                                      },
+                                                      {AiMISR::Field::GPR_addr_0,
+                                                       AiMISR::Field::channel_mask},
                                                       false, // channel_count_eq_one
                                                       false, // AiM_DMA_blocking
                                                       true,  // require_reg_RW_mod
@@ -267,9 +262,7 @@ public:
 
         aim_opcode_to_str[Opcode::ISR_WR_AFLUT] = "ISR_WR_AFLUT";
         opcode_str_to_aim_ISR["ISR_WR_AFLUT"] = AiMISR(Opcode::ISR_WR_AFLUT,
-                                                       {
-                                                           AiMISR::Field::opsize,
-                                                       },
+                                                       {AiMISR::Field::opsize},
                                                        false,   // channel_count_eq_one
                                                        false,   // AiM_DMA_blocking
                                                        false,   // require_reg_RW_mod
@@ -278,10 +271,8 @@ public:
 
         aim_opcode_to_str[Opcode::ISR_RD_MAC] = "ISR_RD_MAC";
         opcode_str_to_aim_ISR["ISR_RD_MAC"] = AiMISR(Opcode::ISR_RD_MAC,
-                                                     {
-                                                         AiMISR::Field::GPR_addr_0,
-                                                         AiMISR::Field::channel_mask,
-                                                     },
+                                                     {AiMISR::Field::GPR_addr_0,
+                                                      AiMISR::Field::channel_mask},
                                                      false, // channel_count_eq_one
                                                      true,  // AiM_DMA_blocking
                                                      true,  // require_reg_RW_mod
@@ -290,10 +281,8 @@ public:
 
         aim_opcode_to_str[Opcode::ISR_RD_AF] = "ISR_RD_AF";
         opcode_str_to_aim_ISR["ISR_RD_AF"] = AiMISR(Opcode::ISR_RD_AF,
-                                                    {
-                                                        AiMISR::Field::GPR_addr_0,
-                                                        AiMISR::Field::channel_mask,
-                                                    },
+                                                    {AiMISR::Field::GPR_addr_0,
+                                                     AiMISR::Field::channel_mask},
                                                     false, // channel_count_eq_one
                                                     true,  // AiM_DMA_blocking
                                                     true,  // require_reg_RW_mod
@@ -302,27 +291,22 @@ public:
 
         aim_opcode_to_str[Opcode::ISR_RD_SBK] = "ISR_RD_SBK";
         opcode_str_to_aim_ISR["ISR_RD_SBK"] = AiMISR(Opcode::ISR_RD_SBK,
-                                                     {
-                                                         //  AiMISR::Field::opsize,
-                                                         AiMISR::Field::GPR_addr_0,
-                                                         AiMISR::Field::channel_mask,
-                                                         AiMISR::Field::bank_index,
-                                                         AiMISR::Field::row_addr,
-                                                     },
-                                                     false,   // true,    // channel_count_eq_one
-                                                     false,   // true,   // AiM_DMA_blocking
+                                                     {AiMISR::Field::GPR_addr_0,
+                                                      AiMISR::Field::channel_mask,
+                                                      AiMISR::Field::bank_index,
+                                                      AiMISR::Field::row_addr},
+                                                     false,   // channel_count_eq_one
+                                                     false,   // AiM_DMA_blocking
                                                      false,   // require_reg_RW_mod
                                                      "column" // target_level
         );
 
         aim_opcode_to_str[Opcode::ISR_COPY_BKGB] = "ISR_COPY_BKGB";
         opcode_str_to_aim_ISR["ISR_COPY_BKGB"] = AiMISR(Opcode::ISR_COPY_BKGB,
-                                                        {
-                                                            AiMISR::Field::opsize,
-                                                            AiMISR::Field::channel_mask,
-                                                            AiMISR::Field::bank_index,
-                                                            AiMISR::Field::row_addr,
-                                                        },
+                                                        {AiMISR::Field::opsize,
+                                                         AiMISR::Field::channel_mask,
+                                                         AiMISR::Field::bank_index,
+                                                         AiMISR::Field::row_addr},
                                                         false,   // channel_count_eq_one
                                                         false,   // AiM_DMA_blocking
                                                         false,   // require_reg_RW_mod
@@ -331,12 +315,10 @@ public:
 
         aim_opcode_to_str[Opcode::ISR_COPY_GBBK] = "ISR_COPY_GBBK";
         opcode_str_to_aim_ISR["ISR_COPY_GBBK"] = AiMISR(Opcode::ISR_COPY_GBBK,
-                                                        {
-                                                            AiMISR::Field::opsize,
-                                                            AiMISR::Field::channel_mask,
-                                                            AiMISR::Field::bank_index,
-                                                            AiMISR::Field::row_addr,
-                                                        },
+                                                        {AiMISR::Field::opsize,
+                                                         AiMISR::Field::channel_mask,
+                                                         AiMISR::Field::bank_index,
+                                                         AiMISR::Field::row_addr},
                                                         false,   // channel_count_eq_one
                                                         false,   // AiM_DMA_blocking
                                                         false,   // require_reg_RW_mod
@@ -345,12 +327,10 @@ public:
 
         aim_opcode_to_str[Opcode::ISR_MAC_SBK] = "ISR_MAC_SBK";
         opcode_str_to_aim_ISR["ISR_MAC_SBK"] = AiMISR(Opcode::ISR_MAC_SBK,
-                                                      {
-                                                          AiMISR::Field::opsize,
-                                                          AiMISR::Field::channel_mask,
-                                                          AiMISR::Field::bank_index,
-                                                          AiMISR::Field::row_addr,
-                                                      },
+                                                      {AiMISR::Field::opsize,
+                                                       AiMISR::Field::channel_mask,
+                                                       AiMISR::Field::bank_index,
+                                                       AiMISR::Field::row_addr},
                                                       false, // channel_count_eq_one
                                                       false, // AiM_DMA_blocking
                                                       false, // require_reg_RW_mod
@@ -359,11 +339,9 @@ public:
 
         aim_opcode_to_str[Opcode::ISR_MAC_ABK] = "ISR_MAC_ABK";
         opcode_str_to_aim_ISR["ISR_MAC_ABK"] = AiMISR(Opcode::ISR_MAC_ABK,
-                                                      {
-                                                          AiMISR::Field::opsize,
-                                                          AiMISR::Field::channel_mask,
-                                                          AiMISR::Field::row_addr,
-                                                      },
+                                                      {AiMISR::Field::opsize,
+                                                       AiMISR::Field::channel_mask,
+                                                       AiMISR::Field::row_addr},
                                                       false, // channel_count_eq_one
                                                       false, // AiM_DMA_blocking
                                                       false, // require_reg_RW_mod
@@ -372,9 +350,7 @@ public:
 
         aim_opcode_to_str[Opcode::ISR_AF] = "ISR_AF";
         opcode_str_to_aim_ISR["ISR_AF"] = AiMISR(Opcode::ISR_AF,
-                                                 {
-                                                     AiMISR::Field::channel_mask,
-                                                 },
+                                                 {AiMISR::Field::channel_mask},
                                                  false, // channel_count_eq_one
                                                  false, // AiM_DMA_blocking
                                                  false, // require_reg_RW_mod
@@ -383,11 +359,9 @@ public:
 
         aim_opcode_to_str[Opcode::ISR_EWMUL] = "ISR_EWMUL";
         opcode_str_to_aim_ISR["ISR_EWMUL"] = AiMISR(Opcode::ISR_EWMUL,
-                                                    {
-                                                        AiMISR::Field::opsize,
-                                                        AiMISR::Field::channel_mask,
-                                                        AiMISR::Field::row_addr,
-                                                    },
+                                                    {AiMISR::Field::opsize,
+                                                     AiMISR::Field::channel_mask,
+                                                     AiMISR::Field::row_addr},
                                                     false,   // channel_count_eq_one
                                                     false,   // AiM_DMA_blocking
                                                     false,   // require_reg_RW_mod
