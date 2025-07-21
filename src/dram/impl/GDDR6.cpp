@@ -194,7 +194,7 @@ public:
              48,   // nRCDWRCP (changed + 10ns)
              32,   // nRP (changed)
              54,   // nRAS (changed from SIM: RDSBK (opsize=1) = ACT + RD + PRE = nRAS + nRP = nRAS + 32 = 86)
-             89,   // nRC (not imported, used only for precharge)
+             89,   // nRC (not imported, used only for precharge. TODO: It's important. It's also the ACT<->ACT latency)
              33,   // nWR (changed 16.625)
              12,   // nRTP (changed 6.25)
              6,    // nCWL
@@ -441,7 +441,7 @@ public:
 
 public:
     struct Node : public DRAMNodeBase<GDDR6> {
-        Node(GDDR6 *dram, Node *parent, int level, int id) : DRAMNodeBase<GDDR6>(dram, parent, level, id){};
+        Node(GDDR6 *dram, Node *parent, int level, int id) : DRAMNodeBase<GDDR6>(dram, parent, level, id) {};
     };
     std::vector<Node *> m_channels;
 
@@ -841,7 +841,7 @@ private:
                                       /// AiM commands that read/write from/to a bank
                                       /// RD: RDCP, MAC, MAC16, AF16, and EWMUL16
                                       /// WR: WRCP and EWMUL16
-                                      // "READ to PRECHARGE within the same bank group"
+                                      // "READ to PRECHARGE within the same bank"
                                       {.level = "channel", .preceding = {"RD", "RDCP", "MAC", "MAC16", "AF16", "EWMUL16"}, .following = {"PREA"}, .latency = V("nRTP")},
                                       {.level = "channel", .preceding = {"MAC16", "AF16", "EWMUL16"}, .following = {"PRE", "PRE4"}, .latency = V("nRTP")},
                                       // "Not based on the GDDR6 document"
@@ -850,11 +850,12 @@ private:
 
                                       /// RAS <-> RAS
                                       // "ACTIVATE to ACTIVATE in a different bank group"
-                                      {.level = "channel", .preceding = {"ACT16"}, .following = {"ACT", "ACT4", "ACT16"}, .latency = V("nRRDS")},
-                                      {.level = "channel", .preceding = {"ACT", "ACT4", "ACT16"}, .following = {"ACT"}, .latency = V("nRRDS")},
+                                      {.level = "channel", .preceding = {"ACT", "ACT4"}, .following = {"ACT", "ACT4"}, .latency = V("nRRDS")},
                                       // "ACTIVATE to ACTIVATE in the same bank group"
                                       {.level = "channel", .preceding = {"ACT", "ACT4", "ACT16"}, .following = {"ACT16"}, .latency = V("nRRDL")},
                                       {.level = "channel", .preceding = {"ACT16"}, .following = {"ACT", "ACT4", "ACT16"}, .latency = V("nRRDL")},
+                                      {.level = "channel", .preceding = {"ACT", "ACT4", "ACT16"}, .following = {"ACT16"}, .latency = V("nRC")},
+                                      {.level = "channel", .preceding = {"ACT16"}, .following = {"ACT", "ACT4", "ACT16"}, .latency = V("nRC")},
                                       //   {.level = "channel", .preceding = {"ACT"}, .following = {"ACT"}, .latency = V("nFAW"), .window = 4}, // Depricated because of the paper
                                       // "A minimum time, tRAS, must have elapsed between opening and closing a row."
                                       {.level = "channel", .preceding = {"ACT", "ACT4", "ACT16"}, .following = {"PREA"}, .latency = V("nRAS")},
@@ -925,14 +926,16 @@ private:
                                       /// AiM commands that read/write from/to a bank
                                       /// RD: RDCP, MAC
                                       /// WR: WRCP
-                                      // "READ to PRECHARGE within the same bank group"
-                                      {.level = "bankgroup", .preceding = {"RD", "RDCP", "MAC"}, .following = {"PRE", "PRE4"}, .latency = V("nRTP")},
+                                      // "READ to PRECHARGE within the same bank"
+                                      {.level = "bankgroup", .preceding = {"RD", "RDCP", "MAC"}, .following = {"PRE4"}, .latency = V("nRTP")},
                                       // "Not based on the GDDR6 document"
-                                      {.level = "bankgroup", .preceding = {"WR", "WRCP"}, .following = {"PRE", "PRE4"}, .latency = V("nCWL") + V("nBL") + V("nWR")},
+                                      {.level = "bankgroup", .preceding = {"WR", "WRCP"}, .following = {"PRE4"}, .latency = V("nCWL") + V("nBL") + V("nWR")},
 
                                       /// RAS <-> RAS
                                       // "ACTIVATE to ACTIVATE in the same bank group"
                                       {.level = "bankgroup", .preceding = {"ACT", "ACT4"}, .following = {"ACT", "ACT4"}, .latency = V("nRRDL")},
+                                      {.level = "bankgroup", .preceding = {"ACT", "ACT4"}, .following = {"ACT4"}, .latency = V("nRC")},
+                                      {.level = "bankgroup", .preceding = {"ACT4"}, .following = {"ACT", "ACT4"}, .latency = V("nRC")},
                                       // "A minimum time, tRAS, must have elapsed between opening and closing a row."
                                       {.level = "bankgroup", .preceding = {"ACT", "ACT4"}, .following = {"PRE4"}, .latency = V("nRAS")},
                                       {.level = "bankgroup", .preceding = {"ACT4"}, .following = {"PRE"}, .latency = V("nRAS")},
@@ -970,12 +973,17 @@ private:
                                       // "An ACTIVATE (ACT) command is required to be issued before the WRITE command to the same bank, and tRCDWR must be met."
                                       {.level = "bank", .preceding = {"ACT"}, .following = {"WRCP"}, .latency = V("nRCDWRCP")},
                                       {.level = "bank", .preceding = {"ACT"}, .following = {"WR", "WRA"}, .latency = V("nRCDWR")},
+                                      // "READ to PRECHARGE within the same bank"
+                                      {.level = "bank", .preceding = {"RD", "RDCP", "MAC"}, .following = {"PRE"}, .latency = V("nRTP")},
+                                      {.level = "bank", .preceding = {"WR", "WRCP"}, .following = {"PRE"}, .latency = V("nCWL") + V("nBL") + V("nWR")},
 
                                       /// RAS <-> RAS
+                                      {.level = "bank", .preceding = {"ACT"}, .following = {"ACT"}, .latency = V("nRC")},
                                       // "A minimum time, tRAS, must have elapsed between opening and closing a row."
                                       {.level = "bank", .preceding = {"ACT"}, .following = {"PRE"}, .latency = V("nRAS")},
                                       // "After the PRECHARGE command, a subsequent command to the same bank cannot be issued until tRP is met."
                                       {.level = "bank", .preceding = {"PRE"}, .following = {"ACT"}, .latency = V("nRP")},
+                                      {.level = "bank", .preceding = {"PRE"}, .following = {"PRE"}, .latency = V("nRP")},
 
                                       {.level = "bank", .preceding = {"RDA"}, .following = {"ACT"}, .latency = V("nRTP") + V("nRP")},
                                       {.level = "bank", .preceding = {"WRA"}, .following = {"ACT"}, .latency = V("nCWL") + V("nBL") + V("nWR") + V("nRP")},
@@ -989,7 +997,6 @@ private:
                                       // "A minimum time tRFCpb is required between a REFpb command and an access command to the same bank that follows"
                                       {.level = "bank", .preceding = {"REFpb"}, .following = {"ACT"}, .latency = V("nRFCpb")},
 
-                                      {.level = "channel", .preceding = {"PRE"}, .following = {"PRE"}, .latency = V("nRP")},
 
                                   });
 #undef V
