@@ -22,6 +22,8 @@ class AiMDRAMSystem final : public IMemorySystem, public Implementation {
 protected:
     Clk_t m_clk = 0;
     IDRAM *m_dram;
+    int m_num_levels = -1;
+    bool m_has_rank = false; // Does the DRAM have rank level?
     IAddrMapper *m_addr_mapper;
     std::vector<IDRAMController *> m_controllers;
     Logger_t m_logger;
@@ -70,25 +72,28 @@ protected:
     }
 
     void apply_addr_mapp(Request &req, int channel_id) {
-        req.addr_vec.resize(5, -1);
+        req.addr_vec.resize(m_num_levels, -1);
         if ((channel_id < 0) || (channel_id >= MAX_CHANNEL_COUNT)) {
             m_logger->error("{} has CH more than {}!", req.str(), MAX_CHANNEL_COUNT);
             exit(-1);
         }
-        req.addr_vec[0] = channel_id;
+        req.addr_vec[m_dram->m_levels("channel")] = channel_id;
+        if (m_has_rank) {
+            req.addr_vec[m_dram->m_levels("rank")] = 0;
+        }
         if (req.bank_index == -1) {
-            req.addr_vec[1] = -1;
-            req.addr_vec[2] = -1;
+            req.addr_vec[m_dram->m_levels("bankgroup")] = -1;
+            req.addr_vec[m_dram->m_levels("bank")] = -1;
         } else {
             if ((req.bank_index < 0) || (req.bank_index >= 16)) {
                 m_logger->error("{} has BA more than 16!", req.str());
                 exit(-1);
             }
-            req.addr_vec[1] = req.bank_index / 4;
-            req.addr_vec[2] = req.bank_index % 4;
+            req.addr_vec[m_dram->m_levels("bankgroup")] = req.bank_index / 4;
+            req.addr_vec[m_dram->m_levels("bank")] = req.bank_index % 4;
         }
-        req.addr_vec[3] = req.row_addr;
-        req.addr_vec[4] = req.col_addr;
+        req.addr_vec[m_dram->m_levels("row")] = req.row_addr;
+        req.addr_vec[m_dram->m_levels("column")] = req.col_addr;
     }
 
 public:
@@ -101,9 +106,20 @@ public:
     void init() override {
         // Create device (a top-level node wrapping all channel nodes)
         m_dram = create_child_ifce<IDRAM>();
+        m_num_levels = m_dram->m_levels.size();
         m_addr_mapper = create_child_ifce<IAddrMapper>();
 
         m_logger = Logging::create_logger("AiMDRAMSystem");
+
+        if (m_dram->m_levels("bankgroup") - m_dram->m_levels("channel") == 1) {
+            m_has_rank = false;
+            m_logger->info("AiMDRAMSystem: No rank level in the DRAM system!");
+        } else if (m_dram->m_levels("bankgroup") - m_dram->m_levels("channel") == 2) {
+            m_has_rank = true;
+            m_logger->info("AiMDRAMSystem: Rank level in the DRAM system!");
+        } else {
+            throw ConfigurationError("AiMDRAMSystem: Invalid number of levels in DRAM {}!", m_dram->get_name());
+        }
 
         int num_channels = m_dram->get_level_size("channel");
 
@@ -383,7 +399,7 @@ public:
                         // aim_req.callback = callback;
                         aim_req.AiM_req_id = AiM_req_id++;
                         apply_addr_mapp(aim_req, aim_req.channel_mask);
-                        int channel_id = aim_req.addr_vec[0];
+                        int channel_id = aim_req.addr_vec[m_dram->m_levels("channel")];
                         // m_logger->info("[CLK {}] 4- Sending {} to channel {}", m_clk, aim_req.str(), channel_id);
                         if (m_controllers[channel_id]->send(aim_req) == false) {
                             remaining_AiM_requests[channel_id].push(aim_req);
@@ -418,7 +434,7 @@ public:
                         Request aim_req = host_req;
                         aim_req.AiM_req_id = AiM_req_id++;
                         apply_addr_mapp(aim_req, aim_req.channel_mask);
-                        int channel_id = aim_req.addr_vec[0];
+                        int channel_id = aim_req.addr_vec[m_dram->m_levels("channel")];
                         // m_logger->info("[CLK {}] 5- Sending {} to channel {}, channel_mask {}", m_clk, aim_req.str(), channel_id, aim_req.channel_mask);
                         if (m_controllers[channel_id]->send(aim_req) == false) {
                             remaining_AiM_requests[channel_id].push(aim_req);

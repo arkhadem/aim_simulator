@@ -197,6 +197,7 @@ public:
 
                 bool requires_reg_RW_mode = false;
                 if (req_it->type == Type::AIM) {
+                    // m_logger->info("Checking AiM request: {}", req_it->str());
                     if (AiMISRInfo::opcode_requires_reg_RW_mod(req_it->opcode)) {
                         requires_reg_RW_mode = true;
                     }
@@ -323,6 +324,7 @@ private:
             if (m_dram->check_ready(req_it->command, req_it->addr_vec)) {
                 request_found = true;
                 req_buffer = &m_active_buffer;
+                // m_logger->info("[CLK {}] Found request in active buffer: {}", m_clk, req_it->str());
             }
         }
 
@@ -338,6 +340,9 @@ private:
                 if ((request_found == false) & (m_priority_buffer.size() != 0)) {
                     return false;
                 }
+                // if (request_found) {
+                //     m_logger->info("[CLK {}] Found request in priority buffer: {}", m_clk, req_it->str());
+                // }
             }
 
             // 2.2.1    If no request to be scheduled in the priority buffer, check the read and write OR AiM buffers.
@@ -346,11 +351,15 @@ private:
                     req_it = m_aim_buffer.begin();
                     if ((req_it->opcode == Opcode::ISR_EOC) || (req_it->opcode == Opcode::ISR_SYNC)) {
                         req_buffer = &m_aim_buffer;
+                        // m_logger->info("[CLK {}] 1- Found AiM request in buffer: {}", m_clk, req_it->str());
                         return true;
                     } else {
                         req_it->command = m_dram->get_preq_command(req_it->final_command, req_it->addr_vec);
                         request_found = m_dram->check_ready(req_it->command, req_it->addr_vec);
                         req_buffer = &m_aim_buffer;
+                        // if (request_found) {
+                        //     m_logger->info("[CLK {}] 2- Found AiM request in buffer: {}", m_clk, req_it->str());
+                        // }
                     }
                 } else {
                     // Query the write policy to decide which buffer to serve
@@ -360,6 +369,9 @@ private:
                         request_found = m_dram->check_ready(req_it->command, req_it->addr_vec);
                         req_buffer = &buffer;
                     }
+                    // if (request_found) {
+                    //     m_logger->info("[CLK {}] Found request in general buffers: {}", m_clk, req_it->str());
+                    // }
                 }
             }
         }

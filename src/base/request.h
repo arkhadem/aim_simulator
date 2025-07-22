@@ -16,8 +16,10 @@ namespace Ramulator {
 enum class Type {
     Read = 0,
     Write = 1,
-    AIM = 2,
-    MAX = 3
+    RefAllBank = 2,
+    RefSingleBank = 3,
+    AIM = 4,
+    MAX = 5
 };
 
 enum class MemAccessRegion {
@@ -414,8 +416,7 @@ public:
 
     static bool type_valid(std::string type_str) {
         if (str_to_type.size() == 0) {
-            printf("AiMISRInfo not initialized!");
-            exit(-1);
+            throw ConfigurationError("AiMISRInfo not initialized!");
         }
 
         if (str_to_type.find(type_str) == str_to_type.end())
@@ -425,8 +426,7 @@ public:
 
     static bool type_valid(Type type) {
         if (type_to_str.size() == 0) {
-            printf("AiMISRInfo not initialized!");
-            exit(-1);
+            throw ConfigurationError("AiMISRInfo not initialized!");
         }
 
         if (type_to_str.find(type) == type_to_str.end())
@@ -436,24 +436,21 @@ public:
 
     static Type convert_str_to_type(std::string type_str) {
         if (type_valid(type_str) == false) {
-            printf("Trace: unknown type %s!", type_str.c_str());
-            exit(-1);
+            throw ConfigurationError("Trace: unknown type {}!", type_str.c_str());
         }
         return str_to_type[type_str];
     }
 
     static std::string convert_type_to_str(Type type) {
         if (type_valid(type) == false) {
-            printf("Trace: unknown type %d!", (int)type);
-            exit(-1);
+            throw ConfigurationError("Trace: unknown type {}!", (int)type);
         }
         return type_to_str[type];
     }
 
     static bool AiM_opcode_valid(std::string AiM_opcode_str) {
         if (opcode_str_to_aim_ISR.size() == 0) {
-            printf("AiMISRInfo not initialized!");
-            exit(-1);
+            throw ConfigurationError("AiMISRInfo not initialized!");
         }
 
         if (opcode_str_to_aim_ISR.find(AiM_opcode_str) == opcode_str_to_aim_ISR.end())
@@ -463,8 +460,7 @@ public:
 
     static bool AiM_opcode_valid(Opcode AiM_opcode) {
         if (aim_opcode_to_str.size() == 0) {
-            printf("AiMISRInfo not initialized!");
-            exit(-1);
+            throw ConfigurationError("AiMISRInfo not initialized!");
         }
 
         if (aim_opcode_to_str.find(AiM_opcode) == aim_opcode_to_str.end())
@@ -474,8 +470,7 @@ public:
 
     static AiMISR convert_opcode_str_to_AiM_ISR(std::string AiM_opcode_str) {
         if (AiM_opcode_valid(AiM_opcode_str) == false) {
-            printf("Trace: unknown AiM opcode %s!", AiM_opcode_str.c_str());
-            exit(-1);
+            throw ConfigurationError("Trace: unknown AiM opcode {}!", AiM_opcode_str.c_str());
         }
         return opcode_str_to_aim_ISR[AiM_opcode_str];
     }
@@ -486,16 +481,14 @@ public:
 
     static std::string convert_AiM_opcode_to_str(Opcode AiM_opcode) {
         if (AiM_opcode_valid(AiM_opcode) == false) {
-            printf("Trace: unknown AiM opcode %d!", (int)AiM_opcode);
-            exit(-1);
+            throw ConfigurationError("Trace: unknown AiM opcode {}!", (int)AiM_opcode);
         }
         return aim_opcode_to_str[AiM_opcode];
     }
 
     static bool mem_access_region_valid(std::string mem_access_region_str) {
         if (str_to_mem_access_region.size() == 0) {
-            printf("AiMISRInfo not initialized!");
-            exit(-1);
+            throw ConfigurationError("AiMISRInfo not initialized!");
         }
 
         if (str_to_mem_access_region.find(mem_access_region_str) == str_to_mem_access_region.end())
@@ -505,8 +498,7 @@ public:
 
     static bool mem_access_region_valid(MemAccessRegion mem_access_region) {
         if (mem_access_region_to_str.size() == 0) {
-            printf("AiMISRInfo not initialized!");
-            exit(-1);
+            throw ConfigurationError("AiMISRInfo not initialized!");
         }
 
         if (mem_access_region_to_str.find(mem_access_region) == mem_access_region_to_str.end())
@@ -516,16 +508,14 @@ public:
 
     static MemAccessRegion convert_str_to_mem_access_region(std::string mem_access_region_str) {
         if (mem_access_region_valid(mem_access_region_str) == false) {
-            printf("Trace: unknown mem_access_region %s!", mem_access_region_str.c_str());
-            exit(-1);
+            throw ConfigurationError("Trace: unknown mem_access_region {}!", mem_access_region_str.c_str());
         }
         return str_to_mem_access_region[mem_access_region_str];
     }
 
     static std::string convert_mem_access_region_to_str(MemAccessRegion mem_access_region) {
         if (mem_access_region_valid(mem_access_region) == false) {
-            printf("Trace: unknown mem_access_region %d!", (int)mem_access_region);
-            exit(-1);
+            throw ConfigurationError("Trace: unknown mem_access_region {}!", (int)mem_access_region);
         }
         return mem_access_region_to_str[mem_access_region];
     }

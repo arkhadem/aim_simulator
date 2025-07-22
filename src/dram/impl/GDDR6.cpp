@@ -997,7 +997,6 @@ private:
                                       // "A minimum time tRFCpb is required between a REFpb command and an access command to the same bank that follows"
                                       {.level = "bank", .preceding = {"REFpb"}, .following = {"ACT"}, .latency = V("nRFCpb")},
 
-
                                   });
 #undef V
     };

@@ -14,6 +14,7 @@ public:
         {"LPDDR5_8Gb_x16", {8 << 10, 16, {1, 1, 4, 4, 1 << 15, 1 << 10}}},
         {"LPDDR5_16Gb_x16", {16 << 10, 16, {1, 1, 4, 4, 1 << 16, 1 << 10}}},
         {"LPDDR5_32Gb_x16", {32 << 10, 16, {1, 1, 4, 4, 1 << 17, 1 << 10}}},
+        {"LPDDR5_AiM_org", {32 << 10, 16, {32, 1, 4, 4, 1 << 17, 1 << 10}}},
     };
 
     inline static const std::map<std::string, std::vector<int>> timing_presets = {
@@ -55,7 +56,7 @@ public:
              0,      // nMODCH
              1250}}, // tCK_ps
 
-        {"LPDDR5_AIM", // name
+        {"LPDDR5_AiM_timing", // name
          {
              6400,   // rate
              4,      // nBL
@@ -173,25 +174,25 @@ public:
                                   {"REFpb", "rank"},
                                   {"RFMab", "rank"},
                                   {"RFMpb", "rank"},
-                                  {"ACT16-1", "channel"},
+                                  {"ACT16-1", "rank"},
                                   {"ACT4-1", "bankgroup"},
-                                  {"ACT16-2", "channel"},
+                                  {"ACT16-2", "rank"},
                                   {"ACT4-2", "bankgroup"},
                                   {"PRE4", "bankgroup"},
                                   {"MAC", "column"},
-                                  {"MAC16", "channel"},
-                                  {"AF16", "channel"},
-                                  {"EWMUL16", "channel"},
+                                  {"MAC16", "rank"},
+                                  {"AF16", "rank"},
+                                  {"EWMUL16", "rank"},
                                   {"RDCP", "column"},
                                   {"WRCP", "column"},
-                                  {"WRGB", "channel"},
-                                  {"RDMAC16", "channel"},
-                                  {"RDAF16", "channel"},
-                                  {"WRMAC16", "channel"},
-                                  {"WRA16", "channel"},
-                                  {"TMOD", "channel"},
-                                  {"SYNC", "channel"},
-                                  {"EOC", "channel"},
+                                  {"WRGB", "rank"},
+                                  {"RDMAC16", "rank"},
+                                  {"RDAF16", "rank"},
+                                  {"WRMAC16", "rank"},
+                                  {"WRA16", "rank"},
+                                  {"TMOD", "rank"},
+                                  {"SYNC", "rank"},
+                                  {"EOC", "rank"},
                               });
 
     inline static const ImplLUT m_command_meta = LUT<DRAMCommandMeta>(
@@ -634,7 +635,7 @@ private:
         m_command_latencies("MAC16") = 1;
         m_command_latencies("AF16") = 1;
         m_command_latencies("EWMUL16") = 1;
-        m_command_latencies("WRA16") = m_timing_vals("nCWL") + m_timing_vals("nBL") + m_timing_vals("nRP");
+        m_command_latencies("WRA16") = m_timing_vals("nCWL") + m_timing_vals("nBL") + m_timing_vals("nRPab");
         m_command_latencies("SYNC") = 1;
         m_command_latencies("EOC") = 1;
 
@@ -699,14 +700,14 @@ private:
                                       {.level = "rank", .preceding = {"PRE"}, .following = {"ACT16-1"}, .latency = V("nRPpb")},
                                       {.level = "rank", .preceding = {"PRE4", "PREA"}, .following = {"ACT-1", "ACT4-1", "ACT16-1"}, .latency = V("nRPab")},
 
-                                      {.level = "bank", .preceding = {"ACT16-1"}, .following = {"RD", "RDA", "WR", "WRA"}, .latency = V("nRCD")},
+                                      {.level = "rank", .preceding = {"ACT16-1"}, .following = {"RD", "RDA", "WR", "WRA"}, .latency = V("nRCD")},
                                       {.level = "rank", .preceding = {"ACT16-1"}, .following = {"MAC"}, .latency = V("nRCDRDMAC")},
                                       {.level = "rank", .preceding = {"ACT16-1"}, .following = {"RDCP"}, .latency = V("nRCDRDCP")},
                                       {.level = "rank", .preceding = {"ACT16-1"}, .following = {"WRCP"}, .latency = V("nRCDWRCP")},
                                       {.level = "rank", .preceding = {"ACT-1", "ACT4-1", "ACT16-1"}, .following = {"MAC16"}, .latency = V("nRCDRDMAC")},
                                       {.level = "rank", .preceding = {"ACT-1", "ACT4-1", "ACT16-1"}, .following = {"AF16"}, .latency = V("nRCDRDAF")},
                                       {.level = "rank", .preceding = {"ACT-1", "ACT4-1", "ACT16-1"}, .following = {"EWMUL16"}, .latency = V("nRCDEWMUL")},
-                                      {.level = "rank", .preceding = {"ACT-1", "ACT4-1", "ACT16-1"}, .following = {"WRA16"}, .latency = V("nRCDWR")},
+                                      {.level = "rank", .preceding = {"ACT-1", "ACT4-1", "ACT16-1"}, .following = {"WRA16"}, .latency = V("nRCD")},
 
                                       {.level = "rank", .preceding = {"RDA"}, .following = {"ACT16-1"}, .latency = V("nRTP") + V("nRPpb")},
                                       {.level = "rank", .preceding = {"WRA"}, .following = {"ACT16-1"}, .latency = V("nCWL") + V("nBL") + V("nWR") + V("nRPpb")},
@@ -728,7 +729,7 @@ private:
                                       {.level = "rank", .preceding = {"REFab"}, .following = {"REFab", "REFpb", "ACT-1", "ACT4-1", "ACT16-1"}, .latency = V("nRFCab")},
                                       {.level = "rank", .preceding = {"REFpb"}, .following = {"ACT16-1"}, .latency = V("nRFCpb")},
 
-                                      {.level = "rank", .preceding = {"TMOD"}, .following = {"ACT-1", "PREA", "PRE", "RD", "WR", "RDA", "WRA", "REFab", "REFpb", "ACT4-1", "ACT16-1", "PRE4", "MAC", "MAC16", "AF16", "EWMUL16", "RDCP", "WRCP", "WRGB", "RDMAC16", "RDAF16", "WRMAC16", "WRA16", "SYNC", "EOC"}, .latency = V("nMODCH")},
+                                      {.level = "rank", .preceding = {"TMOD"}, .following = {"ACT-1", "ACT-2", "PRE", "PREA", "CASRD", "CASWR", "CASWRGB", "CASWRMAC16", "CASRDMAC16", "CASRDAF16", "CASWRA16", "RD", "WR", "RDA", "WRA", "REFab", "REFpb", "RFMab", "RFMpb", "ACT16-1", "ACT4-1", "ACT16-2", "ACT4-2", "PRE4", "MAC", "MAC16", "AF16", "EWMUL16", "RDCP", "WRCP", "WRGB", "RDMAC16", "RDAF16", "WRMAC16", "WRA16", "SYNC", "EOC"}, .latency = V("nMODCH")},
 
                                       /****************************************************** Bank Group ******************************************************/
                                       /// CAS <-> CAS
@@ -761,9 +762,9 @@ private:
                                       /// CAS <-> RAS
                                       {.level = "bankgroup", .preceding = {"ACT4-1"}, .following = {"MAC"}, .latency = V("nRCDRDMAC")},
                                       {.level = "bankgroup", .preceding = {"ACT4-1"}, .following = {"RDCP"}, .latency = V("nRCDRDCP")},
-                                      {.level = "bankgroup", .preceding = {"ACT4-1"}, .following = {"RD", "RDA"}, .latency = V("nRCDRD")},
+                                      {.level = "bankgroup", .preceding = {"ACT4-1"}, .following = {"RD", "RDA"}, .latency = V("nRCD")},
                                       {.level = "bankgroup", .preceding = {"ACT4-1"}, .following = {"WRCP"}, .latency = V("nRCDWRCP")},
-                                      {.level = "bankgroup", .preceding = {"ACT4-1"}, .following = {"WR", "WRA"}, .latency = V("nRCDWR")},
+                                      {.level = "bankgroup", .preceding = {"ACT4-1"}, .following = {"WR", "WRA"}, .latency = V("nRCD")},
 
                                       /****************************************************** Bank ******************************************************/
                                       /// CAS <-> RAS
@@ -974,8 +975,8 @@ private:
                            any_pre_opened = true;                                                    \
                            break;                                                                    \
                        case m_states["Opened"]:                                                      \
-                           if (node->m_row_state.find(target_id) ==                                  \
-                               node->m_row_state.end())                                              \
+                           if (bank->m_row_state.find(target_id) ==                                  \
+                               bank->m_row_state.end())                                              \
                                any_open_diff = true;                                                 \
                            break;                                                                    \
                        default:                                                                      \
@@ -986,7 +987,7 @@ private:
                }                                                                                     \
                                                                                                      \
                if (any_open_diff)                                                                    \
-                   return m_commands["PRE"];                                                         \
+                   return m_commands["PREA"];                                                        \
                if (any_closed)                                                                       \
                    return m_commands["ACT16-1"];                                                     \
                if (any_pre_opened)                                                                   \

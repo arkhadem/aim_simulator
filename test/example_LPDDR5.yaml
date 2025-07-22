@@ -1,0 +1,31 @@
+Frontend:
+  impl: AiMTrace
+  clock_ratio: 1
+  
+  Translation:
+    impl: NoTranslation
+    max_addr: 2147483648
+              
+
+MemorySystem:
+  impl: AiMDRAM
+  clock_ratio: 1
+
+  DRAM:
+    impl: LPDDR5
+    org:
+      preset: LPDDR5_AiM_org
+    timing:
+      preset: LPDDR5_AiM_timing
+
+  Controller:
+    impl: AiM
+    clock_ratio: 1
+    Scheduler:
+      impl: FRFCFS
+    RefreshManager:
+      impl: AllBank
+    plugins:
+
+  AddrMapper:
+    impl: RoBaRaCoCh
